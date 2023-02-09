@@ -5,6 +5,8 @@
         "vector": "cpp",
         "string": "cpp",
         "locale": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "iostream": "cpp",
+        "regex": "cpp"
     }
 }
