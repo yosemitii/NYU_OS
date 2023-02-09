@@ -9,6 +9,7 @@
 #include "Token.cpp"
 
 using namespace std;
+
 #define DEFINITION_LIST 0;
 #define USE_LIST 1;
 #define PROGRAM_TEXT 2;
@@ -66,8 +67,10 @@ int main(int argc, char **argv)
     inFile.close();
 
     passOneV2();
-
-    for (Module &m : moduleList) {
+    cout << endl;
+    cout << "====== after pass one =======" << endl;
+    for (Module &m : moduleList)
+    {
         m.toString();
     }
     passTwo();
@@ -109,6 +112,7 @@ void passOneV2()
     int index = 0;
     int type = DEFINITION_LIST;
     Module newModule;
+    cout << "====== Pass one ======" << endl;
     while (tokenPairNum == 0 && index < tokenList.size())
     {
         // cout << "index: " << index << ": " << tokenList[index].getToken() << endl;
@@ -199,6 +203,7 @@ void passOneV2()
 
 void passTwo()
 {
+    cout << endl;
     cout << "====== Pass two ======" << endl;
     cout << "Symbol Table" << endl;
 
@@ -304,7 +309,7 @@ int passOne(string line, int type, int tokenLeft)
         // Verify: total pair number matches or not
         if (totalPairs != (count - 1) / 2)
         {
-            __parseerror(type, lineOffset, 0);
+            // __parseerror(type, lineOffset, 0);
             // return false;
         }
         else
