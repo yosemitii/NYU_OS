@@ -6,6 +6,10 @@ class OpPair
 public:
     string op;
     int addr;
+    OpPair(string o, int ad) {
+        op = o;
+        addr = ad;
+    }
 };
 
 class Module
@@ -47,5 +51,18 @@ public:
     void setProgText(string op, int addr) {
         OpPair toAdd = OpPair(op, addr);
         progText.push_back(toAdd);
+    }
+
+    void toString() {
+        cout << "--- Module info: ---" << endl;
+        cout << "Offset: " << offset << endl;
+        cout << "Use List: " << endl;
+        for (string& s: useList) {
+            cout << s << endl;
+        }
+        cout << "Prog Text: " << endl;
+        for (OpPair& opp: progText) {
+            cout << opp.op << " " << opp.addr << endl;
+        }
     }
 };

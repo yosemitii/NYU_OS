@@ -4,6 +4,7 @@
 #include <fstream>
 #include <map>
 #include <string.h>
+#include <iomanip>
 #include "Module.cpp"
 #include "Token.cpp"
 
@@ -15,7 +16,10 @@ using namespace std;
 
 static vector<Token> tokenList;
 static std::map<string, int> symbolTable;
+vector<Module> moduleList;
 static int offset = 0;
+
+const char delim[5] = "\t 	 ";
 
 bool syntaxVerify(string line, int index);
 string convertToString(char *a, int size);
@@ -63,7 +67,12 @@ int main(int argc, char **argv)
 
     passOneV2();
 
+    for (Module &m : moduleList) {
+        m.toString();
+    }
     passTwo();
+
+    
 }
 
 void tokenizer(string line, int lineNum)
@@ -72,7 +81,7 @@ void tokenizer(string line, int lineNum)
     strcpy(lineArr, line.c_str());
     char *token;
     int lineOffset = 1;
-    while ((token = strsep(&lineArr, " ")) != NULL)
+    while ((token = strsep(&lineArr, delim)) != NULL)
     {
         // cout << "Strcmp: " << strcmp(token, "") << endl;
         // cout << sizeof(token)/sizeof(char *) << endl;
@@ -99,6 +108,7 @@ void passOneV2()
     int tokenPairNum = 0;
     int index = 0;
     int type = DEFINITION_LIST;
+    Module newModule;
     while (tokenPairNum == 0 && index < tokenList.size())
     {
         // cout << "index: " << index << ": " << tokenList[index].getToken() << endl;
@@ -115,6 +125,8 @@ void passOneV2()
         }
         index++;
 
+        newModule = Module();
+        newModule.setOffset(offset);
         switch (type)
         {
         case 0:
@@ -149,10 +161,14 @@ void passOneV2()
                 cout << "Use: " << usedSymbol << endl;
                 index++;
                 tokenPairNum--;
+                
+                newModule.setUseList(usedSymbol);
             }
+            newModule.toString();
             type++;
             break;
         case 2:
+            
             offset += tokenPairNum;
             while (tokenPairNum > 0)
             {
@@ -170,10 +186,12 @@ void passOneV2()
                 int addr = stoi(addrStr);
                 cout << "Operator: " << op << " Addr: " << addr << endl;
                 index++;
+                newModule.setProgText(op, addr);
                 tokenPairNum--;
             }
             type = 0;
         default:
+            moduleList.push_back(newModule);
             break;
         }
     }
@@ -191,6 +209,48 @@ void passTwo()
     cout << endl;
     cout << "Memory Map" << endl;
 
+    int count = 0;
+    int currOperationAddr;
+    for (Module &m : moduleList)
+    {
+        m.toString();
+        cout << "+" << m.getOffset() << endl;
+        for (OpPair& opp : m.getProgText()){
+            // cout << "OP Pair: " << opp.op << opp.addr << endl;
+            // printf("%3d: %4d\n", count, opp.addr);
+            if (opp.op.compare("R") == 0) {
+                // cout << "R!" << endl;
+                currOperationAddr = m.getOffset() + opp.addr;
+            }
+            else if (opp.op.compare("A") == 0) {
+                currOperationAddr = opp.addr;
+                // cout << "A!" << endl;
+            }
+            else if (opp.op.compare("E") == 0) {
+                int opcode = opp.addr / 1000;
+                int operand = opp.addr % 1000;
+                cout << "operand: " << operand << endl;
+                vector<string> useList = m.getUseList();
+                // cout << "Use list size: " << useList.size() << endl;
+                // string tokenUsed = m.getUseList()[operand];
+                // cout << "Token used here: " << tokenUsed << endl;
+                // int var = symbolTable[tokenUsed];
+                int var = 0;
+                currOperationAddr = opcode * 1000 + var;
+                // cout << "E!" << endl;
+            }
+            else if (opp.op.compare("I") == 0) {
+                currOperationAddr = opp.addr;
+                // cout << "I!" << endl;
+            }
+            else{
+                cout << "ERROR: WRONG OPERATOR" << endl;
+            }
+            cout << setw(3) << setfill('0') << count << ": ";
+            cout << setw(4) << setfill('0') << currOperationAddr << endl;
+            count++;
+        }
+    }
 }
 
 int passOne(string line, int type, int tokenLeft)
@@ -208,13 +268,14 @@ int passOne(string line, int type, int tokenLeft)
     // cout << "Token: " << token << endl;
 
     char *token;
+    // const char delim[5] = "\t 	 ";
     if (type % 3 == 0)
     {
         int count = 0;
         string symbol;
         int symbolVal;
         int totalPairs;
-        while ((token = strsep(&lineArr, " ")) != NULL)
+        while ((token = strsep(&lineArr, delim)) != NULL)
         {
             cout << "line: " << type << "Token: " << token << " size: " << sizeof(char) << endl;
             if (count == 0)
