@@ -108,7 +108,7 @@ void passOneV2()
     int tokenPairNum = 0;
     int index = 0;
     int type = DEFINITION_LIST;
-    Module newModule;
+    // Module newModule;
     while (tokenPairNum == 0 && index < tokenList.size())
     {
         // cout << "index: " << index << ": " << tokenList[index].getToken() << endl;
@@ -125,8 +125,8 @@ void passOneV2()
         }
         index++;
 
-        newModule = Module();
-        newModule.setOffset(offset);
+        Module *newModule = new Module();
+        newModule->setOffset(offset);
         switch (type)
         {
         case 0:
@@ -162,9 +162,9 @@ void passOneV2()
                 index++;
                 tokenPairNum--;
                 
-                newModule.setUseList(usedSymbol);
+                newModule->setUseList(usedSymbol);
             }
-            newModule.toString();
+            newModule->toString();
             type++;
             break;
         case 2:
@@ -186,12 +186,12 @@ void passOneV2()
                 int addr = stoi(addrStr);
                 cout << "Operator: " << op << " Addr: " << addr << endl;
                 index++;
-                newModule.setProgText(op, addr);
+                newModule->setProgText(op, addr);
                 tokenPairNum--;
             }
             type = 0;
         default:
-            moduleList.push_back(newModule);
+            moduleList.push_back(*newModule);
             break;
         }
     }
