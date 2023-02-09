@@ -7,6 +7,7 @@
         "locale": "cpp",
         "ostream": "cpp",
         "iostream": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "filesystem": "cpp"
     }
 }
