@@ -213,7 +213,7 @@ void passOne()
         if (isNumber(tokenStr))
         {
             tokenPairNum = stoi(tokenStr);
-            cout << "Pair Number: " << tokenPairNum << endl;
+            // cout << "Pair Number: " << tokenPairNum << endl;
         }
         else
         {
@@ -221,15 +221,15 @@ void passOne()
         }
         index++;
 
-        Module *newModule = new Module();
-        newModule->setOffset(offset);
+        Module newModule = Module();
+        newModule.setOffset(offset);
         switch (type)
         {
         case 0:
-            cout << "Parsing def list" << endl;
+            // cout << "Parsing def list" << endl;
             while (tokenPairNum > 0)
             {
-                cout << "pair num: " << tokenPairNum << endl;
+                // cout << "pair num: " << tokenPairNum << endl;
                 string symbol = tokenList[index].getToken();
                 index++;
                 cout << "index: " << index << endl;
@@ -254,14 +254,15 @@ void passOne()
             while (tokenPairNum > 0)
             {
                 string usedSymbol = tokenList[index].getToken();
-                cout << "Use: " << usedSymbol << endl;
+                // cout << "Use: " << usedSymbol << endl;
                 index++;
                 tokenPairNum--;
                 
-                newModule->setUseList(usedSymbol);
+                newModule.setUseList(usedSymbol);
             }
-            newModule->toString();
+            
             type++;
+            newModule.toString();
             break;
         case 2:
             
@@ -280,14 +281,15 @@ void passOne()
                     cout << "ERROR: NUMBER EXPECTED" << endl;
                 }
                 int addr = stoi(addrStr);
-                cout << "Operator: " << op << " Addr: " << addr << endl;
+                // cout << "Operator: " << op << " Addr: " << addr << endl;
                 index++;
-                newModule->setProgText(op, addr);
+                newModule.setProgText(op, addr);
                 tokenPairNum--;
             }
             type = 0;
         default:
-            moduleList.push_back(*newModule);
+            // newModule.toString();
+            moduleList.push_back(newModule);
             break;
         }
     }
@@ -310,7 +312,7 @@ void passTwo()
     int currOperationAddr;
     for (Module &m : moduleList)
     {
-        m.toString();
+        // m.toString();
         cout << "+" << m.getOffset() << endl;
         for (OpPair& opp : m.getProgText()){
             // cout << "OP Pair: " << opp.op << opp.addr << endl;
@@ -326,7 +328,7 @@ void passTwo()
             else if (opp.op.compare("E") == 0) {
                 int opcode = opp.addr / 1000;
                 int operand = opp.addr % 1000;
-                cout << "operand: " << operand << endl;
+                // cout << "operand: " << operand << endl;
                 vector<string> useList = m.getUseList();
                 // cout << "Use list size: " << useList.size() << endl;
                 // string tokenUsed = m.getUseList()[operand];
