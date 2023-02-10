@@ -202,12 +202,9 @@ void passOne()
     int tokenPairNum = 0;
     int index = 0;
     int type = DEFINITION_LIST;
-<<<<<<< HEAD
-    // Module newModule;
-=======
+
     Module newModule;
     cout << "====== Pass one ======" << endl;
->>>>>>> e4ec8e49
     while (tokenPairNum == 0 && index < tokenList.size())
     {
         // cout << "index: " << index << ": " << tokenList[index].getToken() << endl;
