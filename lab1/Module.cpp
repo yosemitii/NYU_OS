@@ -56,10 +56,11 @@ public:
     void toString() {
         cout << "--- Module info: ---" << endl;
         cout << "Offset: " << offset << endl;
-        cout << "Use List: " << endl;
+        cout << "Use List: ";
         for (string& s: useList) {
-            cout << s << endl;
+            cout << s << " ";
         }
+        cout << endl;
         cout << "Prog Text: " << endl;
         for (OpPair& opp: progText) {
             cout << opp.op << " " << opp.addr << endl;
