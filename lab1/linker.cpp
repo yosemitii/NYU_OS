@@ -111,11 +111,10 @@ public:
 
 static vector<Token> tokenList;
 static std::map<string, int> symbolTable;
-vector<Module> moduleList;
+static vector<Module> moduleList;
 static int offset = 0;
 const char delim[5] = "\t 	 ";
 
-bool syntaxVerify(string line, int index);
 string convertToString(char *a, int size);
 void tokenizer(string line, int lineNum);
 void passOne();
@@ -124,11 +123,11 @@ bool isNumber(const string &s);
 
 int main(int argc, char **argv)
 {
-    string fileName = convertToString(argv[1], sizeof(argv) / sizeof(char) + 1);
+    string fileName = convertToString(argv[1], strlen(argv[1]));
     // Issues: imput "sometext.txt" and the length is only 8, which is "sometext".
     //  cout << sizeof(argv[1]) << " " << sizeof(char) << endl;
     //  cout << "Size of argv[1]" << sizeof(argv) / sizeof(char)+1 << endl;
-    cout << "openning: " << fileName << endl;
+    // cout << "openning: " << fileName << endl;
     string line;
     ifstream inFile;
     inFile.open(fileName);
@@ -147,23 +146,15 @@ int main(int argc, char **argv)
         lineNum++;
     }
 
-    // regex re("[\\|,:\t]");
-    // sregex_token_iterator first{line.begin(), line.end(), re, -1}, last;
-    // //the '-1' is what makes the regex split (-1 := what was not matched)
-    // vector<string> tokens = {first, last};
-
-    // for (const string &s : tokenList) {
-    //     cout << "Token: " << s << endl;
-    // }
     inFile.close();
 
     passOne();
-    cout << endl;
-    cout << "====== after pass one =======" << endl;
-    for (Module &m : moduleList)
-    {
-        m.toString();
-    }
+    // cout << endl;
+    // cout << "====== after pass one =======" << endl;
+    // for (Module &m : moduleList)
+    // {
+    //     m.toString();
+    // }
     passTwo();
 
     
@@ -177,17 +168,12 @@ void tokenizer(string line, int lineNum)
     int lineOffset = 1;
     while ((token = strsep(&lineArr, delim)) != NULL)
     {
-        // cout << "Strcmp: " << strcmp(token, "") << endl;
-        // cout << sizeof(token)/sizeof(char *) << endl;
-        // if (convertToString(token, sizeof(token)/sizeof(char *)) == " ") {
-        //     cout << "white space" << endl;
-        // }
         // Issue: strange string
         if (strcmp(token, "") != 0)
         {
             Token toAdd = Token(lineNum, lineOffset, token);
             tokenList.push_back(toAdd);
-            cout << "Token: " << toAdd.getLineNum() << ":" << toAdd.getLineOffset() << " " << toAdd.getToken() << endl;
+            // cout << "Token: " << toAdd.getLineNum() << ":" << toAdd.getLineOffset() << " " << toAdd.getToken() << endl;
             lineOffset += strlen(token) + 1;
         }
         else
@@ -204,16 +190,13 @@ void passOne()
     int type = DEFINITION_LIST;
 
     Module newModule;
-    cout << "====== Pass one ======" << endl;
+    // cout << "====== Pass one ======" << endl;
     while (tokenPairNum == 0 && index < tokenList.size())
     {
-        // cout << "index: " << index << ": " << tokenList[index].getToken() << endl;
-        // Parse the number of pairs
         string tokenStr = tokenList[index].getToken();
         if (isNumber(tokenStr))
         {
             tokenPairNum = stoi(tokenStr);
-            // cout << "Pair Number: " << tokenPairNum << endl;
         }
         else
         {
@@ -221,18 +204,17 @@ void passOne()
         }
         index++;
 
-        Module newModule = Module();
-        newModule.setOffset(offset);
         switch (type)
         {
         case 0:
+            newModule = Module();
+            newModule.setOffset(offset);
             // cout << "Parsing def list" << endl;
             while (tokenPairNum > 0)
             {
                 // cout << "pair num: " << tokenPairNum << endl;
                 string symbol = tokenList[index].getToken();
                 index++;
-                cout << "index: " << index << endl;
                 string valStr = tokenList[index].getToken();
                 int symbolVal;
                 if (isNumber(valStr))
@@ -262,7 +244,7 @@ void passOne()
             }
             
             type++;
-            newModule.toString();
+            // newModule.toString();
             break;
         case 2:
             
@@ -287,8 +269,9 @@ void passOne()
                 tokenPairNum--;
             }
             type = 0;
-        default:
             // newModule.toString();
+        default:
+            
             moduleList.push_back(newModule);
             break;
         }
@@ -297,8 +280,8 @@ void passOne()
 
 void passTwo()
 {
-    cout << endl;
-    cout << "====== Pass two ======" << endl;
+    // cout << endl;
+    // cout << "====== Pass two ======" << endl;
     cout << "Symbol Table" << endl;
 
     for (const auto &kv : symbolTable)
@@ -313,7 +296,7 @@ void passTwo()
     for (Module &m : moduleList)
     {
         // m.toString();
-        cout << "+" << m.getOffset() << endl;
+        // cout << "+" << m.getOffset() << endl;
         for (OpPair& opp : m.getProgText()){
             // cout << "OP Pair: " << opp.op << opp.addr << endl;
             // printf("%3d: %4d\n", count, opp.addr);
@@ -331,10 +314,10 @@ void passTwo()
                 // cout << "operand: " << operand << endl;
                 vector<string> useList = m.getUseList();
                 // cout << "Use list size: " << useList.size() << endl;
-                // string tokenUsed = m.getUseList()[operand];
+                string tokenUsed = m.getUseList()[operand];
                 // cout << "Token used here: " << tokenUsed << endl;
-                // int var = symbolTable[tokenUsed];
-                int var = 0;
+                int var = symbolTable[tokenUsed];
+                // int var = 0;
                 currOperationAddr = opcode * 1000 + var;
                 // cout << "E!" << endl;
             }
