@@ -42,13 +42,13 @@ public:
     }
 };
 
-
 class OpPair
 {
 public:
     string op;
     int addr;
-    OpPair(string o, int ad) {
+    OpPair(string o, int ad)
+    {
         op = o;
         addr = ad;
     }
@@ -57,13 +57,23 @@ public:
 class Module
 {
 private:
+    int number;
     int offset;
     vector<string> useList;
     vector<OpPair> progText;
 
 public:
     Module()
-    {}
+    {
+    }
+
+    void setNumber(int n) {
+        number = n;
+    }
+
+    int getNumber() {
+        return number;
+    }
 
     int getOffset()
     {
@@ -85,25 +95,31 @@ public:
         useList.push_back(symbol);
     }
 
-    vector<OpPair> getProgText() {
+    vector<OpPair> getProgText()
+    {
         return progText;
     }
 
-    void setProgText(string op, int addr) {
+    void setProgText(string op, int addr)
+    {
         OpPair toAdd = OpPair(op, addr);
         progText.push_back(toAdd);
     }
 
-    void toString() {
+    void toString()
+    {
         cout << "--- Module info: ---" << endl;
+        cout << "Module number: " << number << endl;
         cout << "Offset: " << offset << endl;
         cout << "Use List: ";
-        for (string& s: useList) {
+        for (string &s : useList)
+        {
             cout << s << " ";
         }
         cout << endl;
         cout << "Prog Text: " << endl;
-        for (OpPair& opp: progText) {
+        for (OpPair &opp : progText)
+        {
             cout << opp.op << " " << opp.addr << endl;
         }
     }
@@ -156,8 +172,6 @@ int main(int argc, char **argv)
     //     m.toString();
     // }
     passTwo();
-
-    
 }
 
 void tokenizer(string line, int lineNum)
@@ -188,6 +202,7 @@ void passOne()
     int tokenPairNum = 0;
     int index = 0;
     int type = DEFINITION_LIST;
+    int moduleNum = 1;
 
     Module newModule;
     // cout << "====== Pass one ======" << endl;
@@ -208,6 +223,7 @@ void passOne()
         {
         case 0:
             newModule = Module();
+            newModule.setNumber(moduleNum);
             newModule.setOffset(offset);
             // cout << "Parsing def list" << endl;
             while (tokenPairNum > 0)
@@ -239,15 +255,15 @@ void passOne()
                 // cout << "Use: " << usedSymbol << endl;
                 index++;
                 tokenPairNum--;
-                
+
                 newModule.setUseList(usedSymbol);
             }
-            
+
             type++;
             // newModule.toString();
             break;
         case 2:
-            
+
             offset += tokenPairNum;
             while (tokenPairNum > 0)
             {
@@ -271,15 +287,16 @@ void passOne()
             type = 0;
             // newModule.toString();
         default:
-            
+
             moduleList.push_back(newModule);
+            moduleNum++;
             break;
         }
     }
 }
 
 void passTwo()
-{
+{   
     // cout << endl;
     // cout << "====== Pass two ======" << endl;
     cout << "Symbol Table" << endl;
@@ -297,18 +314,22 @@ void passTwo()
     {
         // m.toString();
         // cout << "+" << m.getOffset() << endl;
-        for (OpPair& opp : m.getProgText()){
+        for (OpPair &opp : m.getProgText())
+        {
             // cout << "OP Pair: " << opp.op << opp.addr << endl;
             // printf("%3d: %4d\n", count, opp.addr);
-            if (opp.op.compare("R") == 0) {
+            if (opp.op.compare("R") == 0)
+            {
                 // cout << "R!" << endl;
                 currOperationAddr = m.getOffset() + opp.addr;
             }
-            else if (opp.op.compare("A") == 0) {
+            else if (opp.op.compare("A") == 0)
+            {
                 currOperationAddr = opp.addr;
                 // cout << "A!" << endl;
             }
-            else if (opp.op.compare("E") == 0) {
+            else if (opp.op.compare("E") == 0)
+            {
                 int opcode = opp.addr / 1000;
                 int operand = opp.addr % 1000;
                 // cout << "operand: " << operand << endl;
@@ -321,11 +342,13 @@ void passTwo()
                 currOperationAddr = opcode * 1000 + var;
                 // cout << "E!" << endl;
             }
-            else if (opp.op.compare("I") == 0) {
+            else if (opp.op.compare("I") == 0)
+            {
                 currOperationAddr = opp.addr;
                 // cout << "I!" << endl;
             }
-            else{
+            else
+            {
                 cout << "ERROR: WRONG OPERATOR" << endl;
             }
             cout << setw(3) << setfill('0') << count << ": ";
@@ -334,7 +357,6 @@ void passTwo()
         }
     }
 }
-
 
 string convertToString(char *a, int size)
 {
@@ -354,5 +376,3 @@ bool isNumber(const string &s)
         ++it;
     return !s.empty() && it == s.end();
 }
-
-
