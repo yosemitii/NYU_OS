@@ -8,6 +8,7 @@
         "ostream": "cpp",
         "iostream": "cpp",
         "regex": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "fstream": "cpp"
     }
 }

@@ -125,56 +125,38 @@ public:
     }
 };
 
-static vector<Token> tokenList;
+// static vector<Token> tokenList;
 static std::map<string, int> symbolTable;
-static vector<Module> moduleList;
+// static vector<Module> moduleList;
 static int offset = 0;
 const char delim[5] = "\t 	 ";
 
-string convertToString(char *a, int size);
-void tokenizer(string line, int lineNum);
-void passOne();
-void passTwo();
+string convertToString(char *a);
+void lineToTokens(vector<Token>& tokenList, string line, int lineNum);
+void passOne(string fileName);
+void passTwo(string fileName);
 bool isNumber(const string &s);
 
 int main(int argc, char **argv)
 {
-    string fileName = convertToString(argv[1], strlen(argv[1]));
+    string fileName = convertToString(argv[1]);
     // Issues: imput "sometext.txt" and the length is only 8, which is "sometext".
     //  cout << sizeof(argv[1]) << " " << sizeof(char) << endl;
     //  cout << "Size of argv[1]" << sizeof(argv) / sizeof(char)+1 << endl;
     // cout << "openning: " << fileName << endl;
-    string line;
-    ifstream inFile;
-    inFile.open(fileName);
-    vector<string> stringVector;
 
-    while (!inFile.eof())
-    {
-        getline(inFile, line);
-        stringVector.push_back(line);
-    }
-    int lineNum = 1;
-    int tokenLeft = 0;
-    for (string &s : stringVector)
-    {
-        tokenizer(s, lineNum);
-        lineNum++;
-    }
 
-    inFile.close();
-
-    passOne();
+    passOne(fileName);
     // cout << endl;
     // cout << "====== after pass one =======" << endl;
     // for (Module &m : moduleList)
     // {
     //     m.toString();
     // }
-    passTwo();
+    passTwo(fileName);
 }
 
-void tokenizer(string line, int lineNum)
+void lineToTokens(vector<Token>& tokenList, string line, int lineNum)
 {
     char *lineArr = new char[line.length() + 1];
     strcpy(lineArr, line.c_str());
@@ -197,13 +179,37 @@ void tokenizer(string line, int lineNum)
     }
 }
 
-void passOne()
+vector<Token> tokenizer(string fileName) {
+    string line;
+    ifstream inFile;
+    inFile.open(fileName);
+    vector<string> stringVector;
+    vector<Token> tokenList;
+    while (!inFile.eof())
+    {
+        getline(inFile, line);
+        stringVector.push_back(line);
+    }
+    int lineNum = 1;
+    int tokenLeft = 0;
+    for (string &s : stringVector)
+    {
+        lineToTokens(tokenList, s, lineNum);
+        lineNum++;
+    }
+    inFile.close();
+    return tokenList;
+}
+
+void passOne(string fileName)
 {
+    vector<Token> tokenList = tokenizer(fileName);
+    vector<Module> moduleList;
     int tokenPairNum = 0;
     int index = 0;
     int type = DEFINITION_LIST;
     int moduleNum = 1;
-
+    
     Module newModule;
     // cout << "====== Pass one ======" << endl;
     while (tokenPairNum == 0 && index < tokenList.size())
@@ -258,7 +264,6 @@ void passOne()
 
                 newModule.setUseList(usedSymbol);
             }
-
             type++;
             // newModule.toString();
             break;
@@ -287,7 +292,6 @@ void passOne()
             type = 0;
             // newModule.toString();
         default:
-
             moduleList.push_back(newModule);
             moduleNum++;
             break;
@@ -295,8 +299,103 @@ void passOne()
     }
 }
 
-void passTwo()
-{   
+void passTwo(string fileName)
+{
+    vector<Token> tokenList = tokenizer(fileName);
+    vector<Module> moduleList;
+    int tokenPairNum = 0;
+    int index = 0;
+    int type = DEFINITION_LIST;
+    int moduleNum = 1;
+    
+    Module newModule;
+    // cout << "====== Pass one ======" << endl;
+    while (tokenPairNum == 0 && index < tokenList.size())
+    {
+        string tokenStr = tokenList[index].getToken();
+        if (isNumber(tokenStr))
+        {
+            tokenPairNum = stoi(tokenStr);
+        }
+        else
+        {
+            cout << "ERROR: NUMBER EXPECTED" << endl;
+        }
+        index++;
+
+        switch (type)
+        {
+        case 0:
+            newModule = Module();
+            newModule.setNumber(moduleNum);
+            newModule.setOffset(offset);
+            // cout << "Parsing def list" << endl;
+            while (tokenPairNum > 0)
+            {
+                // cout << "pair num: " << tokenPairNum << endl;
+                string symbol = tokenList[index].getToken();
+                index++;
+                string valStr = tokenList[index].getToken();
+                int symbolVal;
+                if (isNumber(valStr))
+                {
+                    symbolVal = stoi(valStr);
+                }
+                else
+                {
+                    cout << "ERROR: NUMBER EXPECTED" << endl;
+                }
+
+                index++;
+                symbolTable[symbol] = symbolVal + offset;
+                tokenPairNum--;
+            }
+            type++;
+            break;
+        case 1:
+            while (tokenPairNum > 0)
+            {
+                string usedSymbol = tokenList[index].getToken();
+                // cout << "Use: " << usedSymbol << endl;
+                index++;
+                tokenPairNum--;
+
+                newModule.setUseList(usedSymbol);
+            }
+            type++;
+            // newModule.toString();
+            break;
+        case 2:
+
+            offset += tokenPairNum;
+            while (tokenPairNum > 0)
+            {
+                string op = tokenList[index].getToken();
+                if (isNumber(op))
+                {
+                    cout << "ERROR: SYMBOL EXPECTED" << endl;
+                }
+                index++;
+                string addrStr = tokenList[index].getToken();
+                if (!isNumber(addrStr))
+                {
+                    cout << "ERROR: NUMBER EXPECTED" << endl;
+                }
+                int addr = stoi(addrStr);
+                // cout << "Operator: " << op << " Addr: " << addr << endl;
+                index++;
+                newModule.setProgText(op, addr);
+                tokenPairNum--;
+            }
+            type = 0;
+            // newModule.toString();
+        default:
+            moduleList.push_back(newModule);
+            moduleNum++;
+            break;
+        }
+    }
+    //Printing stage:
     // cout << endl;
     // cout << "====== Pass two ======" << endl;
     cout << "Symbol Table" << endl;
@@ -358,8 +457,9 @@ void passTwo()
     }
 }
 
-string convertToString(char *a, int size)
+string convertToString(char *a)
 {
+    int size = strlen(a);
     int i;
     string s = "";
     for (i = 0; i < size; i++)
