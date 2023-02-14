@@ -67,11 +67,13 @@ public:
     {
     }
 
-    void setNumber(int n) {
+    void setNumber(int n)
+    {
         number = n;
     }
 
-    int getNumber() {
+    int getNumber()
+    {
         return number;
     }
 
@@ -132,10 +134,11 @@ static int offset = 0;
 const char delim[5] = "\t 	 ";
 
 string convertToString(char *a);
-void lineToTokens(vector<Token>& tokenList, string line, int lineNum);
+void lineToTokens(vector<Token> &tokenList, string line, int lineNum);
 void passOne(string fileName);
 void passTwo(string fileName);
 bool isNumber(const string &s);
+char *getToken(string fileName, int &lineNum, int &indexNum);
 
 int main(int argc, char **argv)
 {
@@ -144,19 +147,36 @@ int main(int argc, char **argv)
     //  cout << sizeof(argv[1]) << " " << sizeof(char) << endl;
     //  cout << "Size of argv[1]" << sizeof(argv) / sizeof(char)+1 << endl;
     // cout << "openning: " << fileName << endl;
+    int lineNum = 1;
+    int index = 1;
+    char *token;
 
-
-    passOne(fileName);
+    // while ((token = getToken(fileName, lineNum, index)) != NULL)
+    // {
+    //     cout << token << endl;
+    //     cout << "lineNum: " << lineNum << " index: " << index << endl;
+    // };
+    token = getToken(fileName, lineNum, index);
+    // cout << token << endl;
+    // cout << "lineNum: " << lineNum << " index: " << index << endl;
+    cout << "-1.1" << endl;
+    token = getToken(fileName, lineNum, index);
+    cout << token << endl;
+    cout << "lineNum: " << lineNum << " index: " << index << endl;
+    token = getToken(fileName, lineNum, index);
+    cout << token << endl;
+    cout << "lineNum: " << lineNum << " index: " << index << endl;
+    // passOne(fileName);
     // cout << endl;
     // cout << "====== after pass one =======" << endl;
     // for (Module &m : moduleList)
     // {
     //     m.toString();
     // }
-    passTwo(fileName);
+    // passTwo(fileName);
 }
 
-void lineToTokens(vector<Token>& tokenList, string line, int lineNum)
+void lineToTokens(vector<Token> &tokenList, string line, int lineNum)
 {
     char *lineArr = new char[line.length() + 1];
     strcpy(lineArr, line.c_str());
@@ -179,7 +199,69 @@ void lineToTokens(vector<Token>& tokenList, string line, int lineNum)
     }
 }
 
-vector<Token> tokenizer(string fileName) {
+char *getToken(string fileName, int &lineNum, int &indexNum)
+{
+    cout << "get token after line: " << lineNum << " index: " << indexNum << endl;
+    ifstream inFile;
+    inFile.open(fileName);
+    string line;
+    int lineCnt = 0;
+    int charCnt = 1;
+    bool eofFlag = false;
+    while (!inFile.eof() && lineCnt < lineNum)
+    {
+        getline(inFile, line);
+        lineCnt++;
+    }
+    // count to the token
+    char *lineArr = new char[line.length() + 1];
+    cout << line << endl;
+    strcpy(lineArr, line.c_str());
+
+    char *token;
+    while ((token = strsep(&lineArr, delim)) != NULL) /*&& (charCnt < indexNum))*/
+    {
+        cout << token << endl;
+    }
+    cout << "end" << endl;
+    // while ((token = strsep(&lineArr, delim)) != NULL)  /*&& (charCnt < indexNum))*/
+    // {
+    //     cout << token << endl;
+    //     charCnt = line.find(convertToString(token)) + 1;
+    //     cout << "lineNum: " << lineNum << " indexNum: " << indexNum << endl;
+    //     cout << "Line: " << lineCnt << " index: " << charCnt << endl;
+    // }
+    // cout << token << endl;
+
+    // adjust and return
+
+    cout << line.length() << endl;
+
+    if ((inFile.eof()) && (charCnt >= line.length()))
+    {
+        cout << "-1" << endl;
+        return NULL;
+    }
+    else if (charCnt == sizeof(line))
+    {
+        cout << "2" << endl;
+        indexNum = 1;
+        cout << "3" << endl;
+        lineNum++;
+        cout << "4" << endl;
+        return token;
+    }
+    else
+    {
+        cout << "5" << endl;
+        indexNum = charCnt;
+        cout << "6" << endl;
+        return token;
+    }
+}
+
+vector<Token> tokenizer(string fileName)
+{
     string line;
     ifstream inFile;
     inFile.open(fileName);
@@ -209,7 +291,7 @@ void passOne(string fileName)
     int index = 0;
     int type = DEFINITION_LIST;
     int moduleNum = 1;
-    
+
     Module newModule;
     // cout << "====== Pass one ======" << endl;
     while (tokenPairNum == 0 && index < tokenList.size())
@@ -303,11 +385,14 @@ void passTwo(string fileName)
 {
     vector<Token> tokenList = tokenizer(fileName);
     vector<Module> moduleList;
+    map<string, int> defList;
+    map<string, int> dupDefineList; /*used to record duplicated defined symbols and its module*/
+    vector<string> usedSymbolList;
     int tokenPairNum = 0;
     int index = 0;
     int type = DEFINITION_LIST;
     int moduleNum = 1;
-    
+
     Module newModule;
     // cout << "====== Pass one ======" << endl;
     while (tokenPairNum == 0 && index < tokenList.size())
@@ -325,6 +410,7 @@ void passTwo(string fileName)
 
         switch (type)
         {
+        /*Phase 1: definition list*/
         case 0:
             newModule = Module();
             newModule.setNumber(moduleNum);
@@ -347,11 +433,27 @@ void passTwo(string fileName)
                 }
 
                 index++;
-                symbolTable[symbol] = symbolVal + offset;
+                if (symbolTable.count(symbol))
+                {
+                    if (dupDefineList.count(symbol) == 1)
+                    {
+                        cout << "Warning: Module " << moduleNum << ": "
+                             << symbol << " redefined and ignored" << endl;
+                    }
+                    dupDefineList[symbol]++;
+                    // printf("Warning: Module %d: %s redefined and ignored", moduleNum, symbol);
+                }
+                else
+                {
+                    symbolTable[symbol] = symbolVal + offset;
+                    defList[symbol] = moduleNum;
+                    dupDefineList[symbol]++;
+                }
                 tokenPairNum--;
             }
             type++;
             break;
+        /*Phase 2: Used symbols*/
         case 1:
             while (tokenPairNum > 0)
             {
@@ -361,6 +463,7 @@ void passTwo(string fileName)
                 tokenPairNum--;
 
                 newModule.setUseList(usedSymbol);
+                usedSymbolList.push_back(usedSymbol);
             }
             type++;
             // newModule.toString();
@@ -395,22 +498,30 @@ void passTwo(string fileName)
             break;
         }
     }
-    //Printing stage:
-    // cout << endl;
-    // cout << "====== Pass two ======" << endl;
+    // Printing stage:
+    //  cout << endl;
+    //  cout << "====== Pass two ======" << endl;
     cout << "Symbol Table" << endl;
 
     for (const auto &kv : symbolTable)
     {
-        cout << kv.first << "=" << kv.second << endl;
+        cout << kv.first << "=" << kv.second;
+        if (dupDefineList[kv.first] > 1)
+        {
+            cout << " Error: This variable is multiple times defined; first value used";
+        }
+        cout << endl;
     }
     cout << endl;
     cout << "Memory Map" << endl;
 
     int count = 0;
     int currOperationAddr;
+
     for (Module &m : moduleList)
     {
+        int errorType = 0;
+        string errorSymbol;
         // m.toString();
         // cout << "+" << m.getOffset() << endl;
         for (OpPair &opp : m.getProgText())
@@ -436,7 +547,16 @@ void passTwo(string fileName)
                 // cout << "Use list size: " << useList.size() << endl;
                 string tokenUsed = m.getUseList()[operand];
                 // cout << "Token used here: " << tokenUsed << endl;
-                int var = symbolTable[tokenUsed];
+                int var;
+                if (symbolTable.count(tokenUsed))
+                {
+                    var = symbolTable[tokenUsed];
+                }
+                else
+                {
+                    errorType = 1;
+                    errorSymbol = tokenUsed;
+                }
                 // int var = 0;
                 currOperationAddr = opcode * 1000 + var;
                 // cout << "E!" << endl;
@@ -451,8 +571,28 @@ void passTwo(string fileName)
                 cout << "ERROR: WRONG OPERATOR" << endl;
             }
             cout << setw(3) << setfill('0') << count << ": ";
-            cout << setw(4) << setfill('0') << currOperationAddr << endl;
+            cout << setw(4) << setfill('0') << currOperationAddr;
+            switch (errorType)
+            {
+            case 1:
+                cout << " Error: " << errorSymbol << " is not defined; zero used";
+                break;
+            default:
+                break;
+            }
+            cout << endl;
+            // errorType = 0;
             count++;
+        }
+    }
+
+    // Warning non-used symbols
+    cout << endl;
+    for (auto kv : symbolTable)
+    {
+        if (find(usedSymbolList.begin(), usedSymbolList.end(), kv.first) == usedSymbolList.end())
+        {
+            cout << "Warning: Module " << defList[kv.first] << ": " << kv.first << " was defined but never used" << endl;
         }
     }
 }
