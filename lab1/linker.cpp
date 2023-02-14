@@ -149,23 +149,8 @@ int main(int argc, char **argv)
     // cout << "openning: " << fileName << endl;
     int lineNum = 1;
     int index = 1;
-    char *token;
-
-    // while ((token = getToken(fileName, lineNum, index)) != NULL)
-    // {
-    //     cout << token << endl;
-    //     cout << "lineNum: " << lineNum << " index: " << index << endl;
-    // };
-    token = getToken(fileName, lineNum, index);
-    // cout << token << endl;
-    // cout << "lineNum: " << lineNum << " index: " << index << endl;
-    cout << "-1.1" << endl;
-    token = getToken(fileName, lineNum, index);
+    char *token = getToken(fileName, lineNum, index);
     cout << token << endl;
-    cout << "lineNum: " << lineNum << " index: " << index << endl;
-    token = getToken(fileName, lineNum, index);
-    cout << token << endl;
-    cout << "lineNum: " << lineNum << " index: " << index << endl;
     // passOne(fileName);
     // cout << endl;
     // cout << "====== after pass one =======" << endl;
@@ -199,63 +184,37 @@ void lineToTokens(vector<Token> &tokenList, string line, int lineNum)
     }
 }
 
-char *getToken(string fileName, int &lineNum, int &indexNum)
+char* getToken(string fileName, int &lineNum, int &indexNum)
 {
-    cout << "get token after line: " << lineNum << " index: " << indexNum << endl;
     ifstream inFile;
     inFile.open(fileName);
     string line;
     int lineCnt = 0;
     int charCnt = 1;
-    bool eofFlag = false;
     while (!inFile.eof() && lineCnt < lineNum)
     {
         getline(inFile, line);
         lineCnt++;
     }
+    cout << "do" << endl;
     // count to the token
     char *lineArr = new char[line.length() + 1];
-    cout << line << endl;
     strcpy(lineArr, line.c_str());
-
     char *token;
-    while ((token = strsep(&lineArr, delim)) != NULL) /*&& (charCnt < indexNum))*/
+    while ((token = strsep(&lineArr, delim)) != NULL && charCnt < indexNum)
     {
-        cout << token << endl;
+        charCnt = line.find(convertToString(token)) + 1;
     }
-    cout << "end" << endl;
-    // while ((token = strsep(&lineArr, delim)) != NULL)  /*&& (charCnt < indexNum))*/
-    // {
-    //     cout << token << endl;
-    //     charCnt = line.find(convertToString(token)) + 1;
-    //     cout << "lineNum: " << lineNum << " indexNum: " << indexNum << endl;
-    //     cout << "Line: " << lineCnt << " index: " << charCnt << endl;
-    // }
-    // cout << token << endl;
 
-    // adjust and return
-
-    cout << line.length() << endl;
-
-    if ((inFile.eof()) && (charCnt >= line.length()))
+    
+    if ((lineCnt == lineNum) && (charCnt = sizeof(line)))
     {
-        cout << "-1" << endl;
+        cout << "do2" << endl;
         return NULL;
-    }
-    else if (charCnt == sizeof(line))
-    {
-        cout << "2" << endl;
-        indexNum = 1;
-        cout << "3" << endl;
-        lineNum++;
-        cout << "4" << endl;
-        return token;
     }
     else
     {
-        cout << "5" << endl;
-        indexNum = charCnt;
-        cout << "6" << endl;
+        cout << "do3" << endl;
         return token;
     }
 }
