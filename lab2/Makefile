@@ -1,6 +1,6 @@
 all:
 
-	g++ scheduler.cpp -o sche
+	g++ Scheduler.cpp main.cpp -o sche
 
 clean:
 	rm -f prog *~ *.o
