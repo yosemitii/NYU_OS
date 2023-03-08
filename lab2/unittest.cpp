@@ -26,8 +26,8 @@ void olistTest()
 
     ol.get();
     ol.get();
-    ol.display();
+    // ol.display();
     ol.remove(10, 1);
-    ol.display();
+    // ol.display();
     // return true;
 }

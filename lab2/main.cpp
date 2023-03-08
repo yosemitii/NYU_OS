@@ -21,14 +21,14 @@ std::string convertToString(char *a);
 int main(int argc, char **argv)
 {
     // Error?: show segmentation error. 
-    // olistTest();
+    olistTest();
     // Simulator simul = Simulator(argc, argv);
     Simulator *simul = new Simulator();
     simul->init(argc, argv);
     // Process* p = (* simul->procs)[0];
     // simul->showProcs();
     // ?:
-    olistTest();
+    // olistTest();
 }
 
 std::string convertToString(char *a)

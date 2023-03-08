@@ -214,10 +214,13 @@ public:
                         __error(1);
                     }
             }
+            cout << "checkpoint 0" <<endl;
             int prio = this->rgen.myrandom(maxprio);
+            cout << "checkpoint 1" <<endl;
             Process *process = new Process(id, info[0], info[1], info[2], info[3], prio);
-            // process->show();
+            // cout << "here 2" <<endl;
             this->procs->push_back(process);
+            
             id++;
         }
         procFile.close();

@@ -151,6 +151,14 @@ public:
         this->procID = id;
     };
 
+    Event(int st, int et, int id, EventType etype, Process *p){
+        this->startTime = st;
+        this->endTime = et;
+        this->procID = id;
+        this->eType = etype;
+        this->proc = p;
+    };
+
     void toString() {
         printf("[%d, %d, %d]", startTime, endTime, procID);
     }
