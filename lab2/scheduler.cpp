@@ -52,7 +52,7 @@ public:
         inFile.open(filename);
         std::string line;
         size = 0;
-        vector<int> numVec;
+        vector<int> *numVec = new vector<int>();
         getline(inFile, line);
         try
         {
@@ -69,7 +69,7 @@ public:
             getline(inFile, line);
             try
             {
-                numVec.push_back(stoi(line));
+                numVec->push_back(stoi(line));
             }
             catch (exception &err)
             {
@@ -77,7 +77,7 @@ public:
                 break;
             }
         }
-        randvals = &numVec[0];
+        randvals = &(* numVec)[0];
         inFile.close();
     }
 
