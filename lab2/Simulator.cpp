@@ -6,7 +6,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "Scheduler.cpp"
+#include "olist.h"
+
 using namespace std;
 
 extern std::string convertToString(char *a);
@@ -14,26 +15,62 @@ extern std::string convertToString(char *a);
 class Simulator
 {
 private:
-    int vflag = 0;
-    int tflag = 0;
-    int eflag = 0;
-    int pflag = 0;
-    int iflag = 0;
-    int sflag = 0;
-    int index;
+    int vflag, tflag, eflag, pflag, iflag, sflag;
     int quantum;
-    int maxprio = 4;
-    int optionIndex = 0;
+    int maxprio;
     std::string inputFile;
     std::string randFile;
-    SchedulerType sType = FCFS;
-    Scheduler *sched;
+    SchedulerType sType;
 
 public:
-    Simulator(int argc, char **argv)
+    Scheduler *sched;
+    RandGenerator rgen;
+    vector<Process *> *procs;
+    OrderedList<Event> des;
+    Simulator()
     {
+
+        // switch (sType)
+        // {
+        // default:
+        //     sched = new FIFO(rgen, inputFile, maxprio);
+        //     break;
+        // }
+
+        // vector<Process *> *processes = buildProcess(rgen, inputFile);
+    }
+
+    void showRands()
+    {
+        int x;
+        std::cout << "Display random numbers: " << endl;
+        for (int i = 0; i < 20; i++)
+        {
+            x = rgen.myrandom(10);
+            std::cout << x << endl;
+        }
+    }
+
+    void showProcs(){
+        for(Process* & p: *procs) {
+            p->show();
+        }
+    }
+
+    void init(int argc, char **argv)
+    {
+        // Option reader
         int c;
         int fileCnt = 0;
+        int index;
+        vflag = 0;
+        tflag = 0;
+        eflag = 0;
+        pflag = 0;
+        iflag = 0;
+        sflag = 0;
+        maxprio = 4;
+        sType = FCFS;
         while ((c = getopt(argc, argv, ":svtepisREP1234567890")) != -1)
         {
             switch (c)
@@ -127,23 +164,60 @@ public:
         // printf("Non-option argument: %s.\n", convertTostd::string(argv[index]));
         std::cout << "input file name: " << inputFile << "." << endl;
         std::cout << "rand file name: " << randFile << "." << endl;
-        RandGenerator rgen = RandGenerator(randFile);
+        this->rgen = RandGenerator(randFile);
 
-        switch (sType)
+        // Process file reader
+        ifstream procFile;
+        procFile.open(inputFile);
+        this->procs = new vector<Process *>;
+        const char *delim = "\t\n ";
+        std::string line;
+        char *lineArr;
+        int id = 0;
+        while (!procFile.eof())
         {
-        default:
-            sched = new FIFO(rgen, inputFile);
-            break;
-        }
-
-        // vector<Process *> *processes = buildProcess(rgen, inputFile);
-
-        int x;
-
-        for (int i = 0; i < 20; i++)
-        {
-            x = rgen.myrandom(10);
-            std::cout << x << endl;
+            getline(procFile, line);
+            // cout << "Line:" << line << endl;
+            lineArr = new char[line.length() + 1];
+            strcpy(lineArr, line.c_str());
+            int info[4];
+            char *token = strtok(lineArr, delim);
+            if (token != NULL)
+            {
+                try
+                {
+                    info[0] = stoi(token);
+                }
+                catch (exception &err)
+                {
+                    __error(1);
+                }
+            }
+            else
+            {
+                break;
+            }
+            int index = 1;
+            while (token != NULL)
+            {
+                // cout << token << endl;
+                token = strtok(NULL, delim);
+                if (token != NULL)
+                    try
+                    {
+                        info[index] = stoi(token);
+                        // cout << info[index] << endl;
+                    }
+                    catch (exception &err)
+                    {
+                        __error(1);
+                    }
+            }
+            int prio = this->rgen.myrandom(maxprio);
+            Process *process = new Process(id, info[0], info[1], info[2], info[3], prio);
+            // process->show();
+            this->procs->push_back(process);
+            id++;
         }
     }
 };

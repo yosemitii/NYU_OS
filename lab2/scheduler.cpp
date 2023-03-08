@@ -3,10 +3,12 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <queue>
+#include <list>
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
-// #include "scheduler.cpp"
+
 extern void __error(int errcode);
 
 using namespace std;
@@ -19,7 +21,21 @@ typedef enum SchedulerType
     RR,
     PRIO,
     PREPRIO,
-}SchedulerType;
+} SchedulerType;
+
+typedef enum EventType
+{
+    CPU_BURST,
+    IO_BURST
+} EventType;
+
+typedef enum ProcState
+{
+    RUNNG,
+    READY,
+    BLOCK,
+    CREATED
+} ProcState;
 /*Class Definition*/
 class RandGenerator
 {
@@ -29,6 +45,7 @@ private:
     int size;
 
 public:
+    RandGenerator() {}
     RandGenerator(std::string filename)
     {
         ifstream inFile;
@@ -61,6 +78,7 @@ public:
             }
         }
         randvals = &numVec[0];
+        inFile.close();
     }
 
     int myrandom(int burst)
@@ -92,6 +110,10 @@ public:
         this->io = io;
         this->prio = prio;
     }
+    void show()
+    {
+        printf("ID: %d, ArrTime: %d, Total: %d, CPU: %d, IO: %d, Prio: %d\n", id, at, tc, cb, io, prio);
+    }
 };
 
 class Scheduler
@@ -104,66 +126,67 @@ public:
     // virtual void addProcess() = 0;
     // virtual Process *getNextProc() = 0;
     // virtual void runQueue() = 0;
-    Scheduler(RandGenerator &rgen, string inputFile)
-    {
-        ifstream inFile;
-        inFile.open(inputFile);
-        this->procs = new vector<Process *>;
-        const char *delim = "\t\n ";
-        std::string line;
-        char *lineArr;
-        int id = 0;
-        while (!inFile.eof())
-        {
-
-            getline(inFile, line);
-            // cout << "Line:" << line << endl;
-            lineArr = new char[line.length() + 1];
-            strcpy(lineArr, line.c_str());
-            int info[4];
-            char *token = strtok(lineArr, delim);
-            if (token != NULL)
-            {
-                try
-                {
-                    info[0] = stoi(token);
-                }
-                catch (exception &err)
-                {
-                    __error(1);
-                }
-            }
-            else
-            {
-                break;
-            }
-            int index = 1;
-            while (token != NULL)
-            {
-                // cout << token << endl;
-                token = strtok(NULL, delim);
-                if (token != NULL)
-                    try
-                    {
-                        info[index] = stoi(token);
-                        // cout << info[index] << endl;
-                    }
-                    catch (exception &err)
-                    {
-                        __error(1);
-                    }
-            }
-            int prio = rgen.myrandom(100);
-            Process *process = new Process(id, info[0], info[1], info[2], info[3], prio);
-            this->procs->push_back(process);
-            id++;
-        }
-    }
 };
 
 class FIFO : public Scheduler
 {
-    public:
-        FIFO(RandGenerator &rgen, string inputFile): Scheduler(rgen, inputFile){};
+public:
+    // FIFO(RandGenerator &rgen, string inputFile, int maxprio) : Scheduler(rgen, inputFile, 0, maxprio){};
+};
 
+class Event
+{
+
+public:
+    int startTime;
+    int endTime;
+    int procID;
+    EventType eType;
+    Process *proc;
+    Event(){
+    }
+    Event(int st, int et, int id){
+        this->startTime = st;
+        this->endTime = et;
+        this->procID = id;
+    };
+    // bool geq(Event b) {
+    //     if (this->startTime >= b.startTime) {
+    //         return true;
+    //     }
+    //     return false;
+    // }
+    // bool Event::operator>= (Event b) {
+    //      return this->startTime >= b.startTime;
+    // }
+    bool operator >= (Event b){
+        return this->startTime >= b.startTime;
+    }
+
+    bool operator > (Event b){
+        return this->startTime > b.startTime;
+    }
+
+    bool operator <= (Event b){
+        return this->startTime >= b.startTime;
+    }
+
+    bool operator < (Event b){
+        return this->startTime > b.startTime;
+    }
+
+    bool operator = (Event b){
+        return this->startTime = b.startTime;
+    }
+};
+
+class EventQueue
+{
+private:
+    queue<Event> eventq;
+
+public:
+    EventQueue(){};
+
+   
 };
