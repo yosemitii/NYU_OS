@@ -52,7 +52,7 @@ public:
         inFile.open(filename);
         std::string line;
         size = 0;
-        vector<int> *numVec = new vector<int>();
+        vector<int> numVec;
         getline(inFile, line);
         try
         {
@@ -64,12 +64,15 @@ public:
             cout << "File:" << filename << " Line: " << line << endl;
             __error(0);
         }
+        randvals = new int[size];
+        int index = 0;
         while (!inFile.eof())
         {
             getline(inFile, line);
             try
             {
-                numVec->push_back(stoi(line));
+                // numVec.push_back(stoi(line));
+                randvals[index] = stoi(line);
             }
             catch (exception &err)
             {
@@ -77,7 +80,7 @@ public:
                 break;
             }
         }
-        randvals = &(* numVec)[0];
+        // randvals = &numVec[0];
         inFile.close();
     }
 

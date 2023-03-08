@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <cstring> 
 #include "olist.h"
 
 using namespace std;
@@ -24,7 +25,7 @@ private:
 
 public:
     Scheduler *sched;
-    RandGenerator* rgen;
+    RandGenerator rgen;
     vector<Process *> *procs;
     OrderedList<Event> des;
     Simulator()
@@ -46,7 +47,7 @@ public:
         std::cout << "Display random numbers: " << endl;
         for (int i = 0; i < 20; i++)
         {
-            x = rgen->myrandom(10);
+            x = rgen.myrandom(10);
             std::cout << x << endl;
         }
     }
@@ -165,7 +166,7 @@ public:
         // printf("Non-option argument: %s.\n", convertTostd::string(argv[index]));
         std::cout << "input file name: " << inputFile << "." << endl;
         std::cout << "rand file name: " << randFile << "." << endl;
-        this->rgen = new RandGenerator(randFile);
+        this->rgen = RandGenerator(randFile);
         
         // Process file reader
         ifstream procFile;
@@ -215,7 +216,7 @@ public:
                     }
             }
             cout << "checkpoint 0" <<endl;
-            int prio = this->rgen->myrandom(maxprio);
+            int prio = this->rgen.myrandom(maxprio);
             cout << "checkpoint 1" <<endl;
             Process *process = new Process(id, info[0], info[1], info[2], info[3], prio);
             // cout << "here 2" <<endl;
