@@ -1,6 +1,6 @@
 all:
 
-	g++ main.cpp -o sche
+	g++ -g main.cpp -o sche
 
 clean:
 	rm -f prog *~ *.o

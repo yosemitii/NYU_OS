@@ -150,6 +150,10 @@ public:
         this->endTime = et;
         this->procID = id;
     };
+
+    void toString() {
+        printf("[%d, %d, %d]", startTime, endTime, procID);
+    }
     // bool geq(Event b) {
     //     if (this->startTime >= b.startTime) {
     //         return true;
@@ -159,24 +163,24 @@ public:
     // bool Event::operator>= (Event b) {
     //      return this->startTime >= b.startTime;
     // }
-    bool operator >= (Event b){
-        return this->startTime >= b.startTime;
+    bool operator >= (Event *b){
+        return this->startTime >= b->startTime;
     }
 
-    bool operator > (Event b){
-        return this->startTime > b.startTime;
+    bool operator > (Event *b){
+        return this->startTime > b->startTime;
     }
 
-    bool operator <= (Event b){
-        return this->startTime >= b.startTime;
+    bool operator <= (Event *b){
+        return this->startTime <= b->startTime;
     }
 
-    bool operator < (Event b){
-        return this->startTime > b.startTime;
+    bool operator < (Event *b){
+        return this->startTime < b->startTime;
     }
 
-    bool operator = (Event b){
-        return this->startTime = b.startTime;
+    bool operator = (Event *b){
+        return this->startTime = b->startTime;
     }
 };
 

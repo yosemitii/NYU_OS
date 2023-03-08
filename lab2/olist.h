@@ -49,7 +49,7 @@ public:
         size = 0;
     };
 
-    void addData(T data)
+    void addData(T &data)
     {
         // cout << "Data: " << data << endl;
         Node *curr = sentinem->next;
@@ -65,26 +65,53 @@ public:
             // display();
             return;
         }
-        if (std::is_same<T, int>::value)
+        // if (std::is_same<T, int>::value)
+        // {
+        //     while (curr != sentinem && data >= curr->data)
+        //     {
+        //         cout << "curr->event: " << curr->data << endl;
+        //         curr = curr->next;
+        //     }
+        // }
+        while (curr != sentinem)
         {
-            while (curr != sentinem && data >= curr->data)
-            {
-                // cout << "curr->data: " << curr->data << endl;
-                curr = curr->next;
+            
+            cout << "data->startTime: " << data->startTime << endl;
+            cout << "curr->data->startTime: " << curr->data->startTime << endl;
+            cout << "data >= curr->data" << (data->startTime >= curr->data->startTime) << endl;
+            // cout << "curr->event: " << curr->data.toString() << endl;
+            curr->data->toString();
+            cout << endl;
+            if (data->startTime <= curr->data->startTime) {
+                break;
             }
+            curr = curr->next;
+            // cout << "Curr: " << curr->data->startTime << endl;
+            // curr->data->toString();
         }
+        
+        // if (std::is_same<T, Event>::value)
+        // {
+        //     while (curr != sentinem && data >= curr->data)
+        //     {
+        //         // cout << "curr->event: " << curr->data.toString() << endl;
+        //         // curr->data.toString();
+        //         curr = curr->next;
+        //     }
+        // }
 
         Node *n = new Node(data);
         // n->prev = curr;
         // n->next = curr->next;
         // curr->next->prev = n;
         // curr->next = n;
+
         n->next = curr;
         n->prev = curr->prev;
         curr->prev->next = n;
         curr->prev = n;
         size++;
-        // display();
+        display();
         return;
     }
 
@@ -93,43 +120,38 @@ public:
         Node *curr = sentinem->next;
         while (curr != sentinem)
         {
-            if (std::is_same<T, int>::value)
-            {
-                cout << curr->data << "->";
-            }
-            else if (std::is_same<T, Event>::value)
-            {
-                cout << curr->data->startTime << "->";
-            }
+            // if (std::is_same<T, int>::value)
+            // {
+            //     cout << curr->data << "->";
+            // }
+            // else if (std::is_same<T, Event>::value)
+            // {
+            curr->data->toString();
+            cout << "->";
+            // cout << curr->data.startTime << "->";
+            // }
             curr = curr->next;
         }
         cout << endl;
         curr = sentinem->next;
         while (curr != sentinem)
         {
-            if (std::is_same<T, int>::value)
-            {
-                cout << curr->data << "<-";
-            }
-            else if (std::is_same<T, Event>::value)
-            {
-                cout << curr->data->startTime << "<-";
-            }
+            // if (std::is_same<T, int>::value)
+            // {
+            //     cout << curr->data << "<-";
+            // }
+            // else if (std::is_same<T, Event>::value)
+            // {
+            // cout << curr->data.startTime << "<-";
+            // }
+            curr->data->toString();
+            cout << "<-";
             curr = curr->next;
         }
         cout << endl;
         return;
     }
 };
-// OrderedList()
-// {
-//     Node *sentinem = new Node(-999);
-// }
-
-// T getData()
-// {
-//     return *tlist.begin();
-// }
 
 // void addData(T *data)
 // {

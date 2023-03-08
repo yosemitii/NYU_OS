@@ -20,7 +20,7 @@ std::string convertToString(char *a);
 
 int main(int argc, char **argv)
 {
-    // olistTest();
+    olistTest();
 
     // Simulator simul = Simulator(argc, argv);
     Simulator *simul = new Simulator();
