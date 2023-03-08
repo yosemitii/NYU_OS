@@ -1,6 +1,6 @@
 #include "olist.h"
 
-bool olistTest()
+void olistTest()
 {
     // OrderedList<int> o = OrderedList<int>();
     // o.addData(2);
@@ -14,17 +14,20 @@ bool olistTest()
     Event *e2 = new Event(20, 50, 3);
     Event *e3 = new Event(5, 20, 2);
     Event *e4 = new Event(10, 20, 1);
+    Event *e5 = new Event(5, 31, 2);
     OrderedList<Event *> ol = OrderedList<Event *>();
 
-    // cout << "e1 >= e2? " << (e1 >= e2) << endl;
-    // cout << "e1 <= e2? " << (e1 <= e2) << endl;
-    // e1->toString();
-    // e2->toString();
-
-    ol.addData(e1);
-    ol.addData(e2);
-    ol.addData(e3);
-    ol.addData(e4);
+    ol.put(e1);
+    ol.put(e2);
+    ol.put(e3);
+    ol.put(e4);
+    ol.put(e5);
     ol.display();
-    return true;
+
+    ol.get();
+    ol.get();
+    ol.display();
+    ol.remove(10, 1);
+    ol.display();
+    // return true;
 }

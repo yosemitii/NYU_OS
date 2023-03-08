@@ -20,14 +20,15 @@ std::string convertToString(char *a);
 
 int main(int argc, char **argv)
 {
-    olistTest();
-
+    // Error?: show segmentation error. 
+    // olistTest();
     // Simulator simul = Simulator(argc, argv);
     Simulator *simul = new Simulator();
     simul->init(argc, argv);
     // Process* p = (* simul->procs)[0];
-    simul->showProcs();
-
+    // simul->showProcs();
+    // ?:
+    olistTest();
 }
 
 std::string convertToString(char *a)

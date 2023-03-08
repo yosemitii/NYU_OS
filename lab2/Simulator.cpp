@@ -59,6 +59,7 @@ public:
 
     void init(int argc, char **argv)
     {
+        cout << argv[0] << argv[1] << argv[2] << argv[3] << endl;
         // Option reader
         int c;
         int fileCnt = 0;
@@ -165,7 +166,7 @@ public:
         std::cout << "input file name: " << inputFile << "." << endl;
         std::cout << "rand file name: " << randFile << "." << endl;
         this->rgen = RandGenerator(randFile);
-
+        
         // Process file reader
         ifstream procFile;
         procFile.open(inputFile);
@@ -219,5 +220,6 @@ public:
             this->procs->push_back(process);
             id++;
         }
+        procFile.close();
     }
 };
