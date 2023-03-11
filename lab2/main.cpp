@@ -20,11 +20,13 @@ std::string convertToString(char *a);
 
 int main(int argc, char **argv)
 {
-    // Error?: show segmentation error. 
-    olistTest();
+    // Error?: show segmentation error.
+    // olistTest();
+    // queueTest();
     // Simulator simul = Simulator(argc, argv);
     Simulator *simul = new Simulator();
     simul->init(argc, argv);
+    simul->simulation();
     // Process* p = (* simul->procs)[0];
     // simul->showProcs();
     // ?:
@@ -45,7 +47,7 @@ std::string convertToString(char *a)
 
 void __error(int errcode)
 {
-    static string errstr[] = {
+    static std::string errstr[] = {
         "VARIABLE_EXPECTED",      // Number expect, anything >= 2^30 is not a number either
         "FILE_EXPECTED",          // Symbol Expected
         "_EXPECTED",              // Addressing Expected which is A/E/I/R

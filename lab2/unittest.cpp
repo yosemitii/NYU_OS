@@ -1,20 +1,12 @@
 #include "olist.h"
-
 void olistTest()
 {
-    // OrderedList<int> o = OrderedList<int>();
-    // o.addData(2);
-    // o.addData(1);
-    // o.addData(5);
-    // o.addData(6);
-    // o.addData(2);
-    // o.display();
 
-    Event *e1 = new Event(0, 10, 4);
-    Event *e2 = new Event(20, 50, 3);
-    Event *e3 = new Event(5, 20, 2);
-    Event *e4 = new Event(10, 20, 1);
-    Event *e5 = new Event(5, 31, 2);
+    Event *e1 = new Event(0, 4);
+    Event *e2 = new Event(20, 3);
+    Event *e3 = new Event(5, 2);
+    Event *e4 = new Event(10, 1);
+    Event *e5 = new Event(5, 2);
     OrderedList<Event *> ol = OrderedList<Event *>();
 
     ol.put(e1);
@@ -26,8 +18,30 @@ void olistTest()
 
     ol.get();
     ol.get();
-    // ol.display();
+    ol.display();
     ol.remove(10, 1);
-    // ol.display();
-    // return true;
+    ol.display();
+    
+}
+
+
+void queueTest() {
+    //Queue Property test
+    std::queue<Process *> *readyq = new std::queue<Process *>();
+    Process *p1 = new Process(0, 10, 20, 10, 10, 4);
+    Process *p2 = new Process(1, 15, 25, 15, 10, 4);
+    Process *p3 = new Process(2, 25, 35, 45, 10, 4);
+    readyq->push(p1);
+    readyq->push(p2);
+    readyq->push(p3);
+    Process *t = readyq->front();
+    readyq->pop();
+    t->show();
+    readyq->push(t);
+    t = nullptr;
+    delete t;
+    readyq->pop();
+    readyq->pop();
+    t = readyq->front();
+    t->show();
 }
