@@ -308,13 +308,13 @@ public:
 
                 // process->pState = RUNNG;
                 scheduler->run();
-                if (process->pState != RUNNG)
-                {
-                    newEvent = new Event(currTime + 1,
-                                         process->id, TRANS_TO_RUN, process);
-                    eventQ->put(newEvent);
-                    break;
-                }
+                // if (process->pState != RUNNG)
+                // {
+                //     newEvent = new Event(currTime + 1,
+                //                          process->id, TRANS_TO_RUN, process);
+                //     eventQ->put(newEvent);
+                //     break;
+                // }
                 nextTimeStamp = rgen->myrandom(process->cpuBurst);
                 nextTimeStamp = std::min(nextTimeStamp, process->totalTime);
                 // std::cout << "CPU burst: " << nextTimeStamp << std::endl;
@@ -329,7 +329,6 @@ public:
                 cout << "TRANS TO BLOCK" << endl;
                 if (process->pState == RUNNG)
                 {
-                    
                     process->totalTime -= timeInPrevState;
                     process->pState = BLOCKED;
                     scheduler->block();
@@ -360,6 +359,22 @@ public:
             if (CALL_SCHEDULER)
             {
                 scheduler->runQueueLog();
+                CALL_SCHEDULER = false;
+                
+                if (eventQ->getNextEventTime() == currTime)
+                    continue;
+                Process *currRunngProc;
+                if (scheduler->getCurrRunngProc() == nullptr)
+                {
+                    currRunngProc = scheduler->getNextProcess();
+                    if (currRunngProc == nullptr) {
+                        continue;
+                    } else {
+                        currRunngProc->show();
+                        Event *newEvent = new Event(currTime, currRunngProc->id, TRANS_TO_READY, currRunngProc);
+                        eventQ->put(newEvent);
+                    }
+                }
             }
         }
     }

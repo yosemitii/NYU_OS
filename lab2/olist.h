@@ -186,6 +186,17 @@ public:
         // cout << "sentinem" << endl;
         return;
     }
+
+    int getNextEventTime() {
+        if (size > 0) {
+            Node *head = sentinem->next;
+            return head->data->timestamp;
+        }
+        else
+        {
+            std::cout << "Event queue is empty" << endl;
+        }
+    }
 };
 
 // void addData(T *data)

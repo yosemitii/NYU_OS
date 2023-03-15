@@ -141,6 +141,7 @@ public:
     virtual Process *preempt() = 0;
     virtual Process *run() = 0;
     virtual Process *block() = 0;
+    virtual Process *getCurrRunngProc() = 0;
     virtual void setTimestamp(int t)
     {
         this->timestamp = t;
@@ -167,9 +168,10 @@ public:
     };
     Process *getNextProcess()
     {
+        if (readyQueue->empty())
+            return nullptr;
         Process *p = readyQueue->front();
         readyQueue->pop();
-        runQueue->push(p);
         return p;
     };
     Process *preempt()
@@ -206,6 +208,10 @@ public:
         {
             p = runQueue->front();
             runQueue->pop();
+
+            // if (!readyQueue->empty()) {
+            //     run();
+            // }
             // int timeUsed = timestamp - p->timestamp;
             // cout << "Time used: " << timeUsed << endl;
             // p->totalTime -= timeUsed;
@@ -222,6 +228,16 @@ public:
             return nullptr;
         }
     }
+
+    Process *getCurrRunngProc() {
+        if (runQueue->empty()){
+            return nullptr;
+        }
+        else {
+            return runQueue->front();
+        }
+    }
+
     // FIFO(RandGenerator &rgen, string inputFile, int maxprio) : Scheduler(rgen, inputFile, 0, maxprio){};
 };
 
