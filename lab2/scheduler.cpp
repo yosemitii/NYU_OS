@@ -141,115 +141,36 @@ public:
     virtual void addProcess(Process *p) = 0;
     virtual Process *getNextProcess() = 0;
     virtual bool isPreemptive() = 0;
-    virtual void runQueueLog(){
-
-    };
+    virtual void runQueueLog(){};
     // virtual void runQueue() = 0;
 };
-
-// class FIFO : public Scheduler
-// {
-// public:
-//     FIFO() : Scheduler(){};
-
-// void addProcess(Process *p)
-// {
-//     // readyQueue->push(p);
-// };
-// Process *getNextProcess()
-// {
-//     if (readyQueue->empty())
-//         return nullptr;
-//     Process *p = readyQueue->front();
-//     readyQueue->pop();
-//     return p;
-//     return nullptr;
-// };
-// Process *preempt()
-// {
-//     Process *p = runQueue->front();
-//     runQueue->pop();
-//     expiredQueue->push(p);
-//     return p;
-// }
-// Process *run()
-// {
-//     Process *p;
-//     if (!readyQueue->empty())
-//     {
-//         p = readyQueue->front();
-//         if (runQueue->size() < CPULimit)
-//         {
-//             readyQueue->pop();
-//             runQueue->push(p);
-//             p->pState = RUNNG;
-//         }
-//         return p;
-//     }
-//     else
-//     {
-//         std::cout << "WARNING: Ready Queue is empty." << endl;
-//         return nullptr;
-//     }
-// }
-
-//     virtual Process *block()
-//     {
-//         Process *p;
-//         if (!runQueue->empty())
-//         {
-//             p = runQueue->front();
-//             runQueue->pop();
-//             if (p->totalTime > 0)
-//             {
-//                 expiredQueue->push(p);
-//             }
-//             return p;
-//         }
-//         else
-//         {
-//             cout << "WARNING: Run Queue is empty." << endl;
-//             return nullptr;
-//         }
-//     }
-
-//     Process *getCurrRunngProc()
-//     {
-//         if (runQueue->empty())
-//         {
-//             return nullptr;
-//         }
-//         else
-//         {
-//             return runQueue->front();
-//         }
-//     }
-// };
 
 class FIFO : public Scheduler
 {
 private:
-    std::queue<Process *> *runQueue;
+    std::deque<Process *> *runQueue;
 
 public:
     FIFO() : Scheduler(){
-        runQueue = new std::queue<Process*>();
+        runQueue = new std::deque<Process*>();
     };
     
-    void addProcess(Process *p)
+    virtual void addProcess(Process *p)
     {
-        runQueue->push(p);
+        runQueue->push_back(p);
     };
 
     Process *getNextProcess()
     {
+        Process *p = nullptr;
         if (!runQueue->empty())
         {
-            Process *p = runQueue->front();
-            runQueue->pop();
-            return p;
+            p = runQueue->front();
+            runQueue->pop_front();
+
         }
-        return nullptr;
+        runQueueLog();
+        return p;
     }
 
     bool isPreemptive()
@@ -258,42 +179,53 @@ public:
     }
 
     void runQueueLog(){
-        printf("SCHED (%d)", runQueue->size());
+        printf("SCHED (%d):", runQueue->size());
+        if (runQueue->size() == 0) return;
         Process *head = runQueue->front();
-        if (runQueue->size() == 1)
-        {
-            std::cout << head->id << ":" << head->id << std::endl;
+        std::cout << head->id << ":" << head->timestamp << " ";
+        runQueue->pop_front();
+        runQueue->push_back(head);
+        Process *curr = runQueue->front();
+        while (curr != head) {
+            std::cout << curr->id << ":" << curr->timestamp << " ";
+            runQueue->pop_front();
+            runQueue->push_back(curr);
+            curr = runQueue->front();
         }
+        std::cout << std::endl;
     }
 };
 
 
-class LIFO : public Scheduler
+class LIFO : public FIFO
 {
 private:
-    std::stack<Process *> *runQueue;
+    std::deque<Process *> *runQueue;
 
 public:
-    LIFO() : Scheduler()
+    LIFO() : FIFO()
     {
-        runQueue = new std::stack<Process*>();
-    };
-    void addProcess(Process *p)
-    {
-        runQueue->push(p);
+        runQueue = new std::deque<Process*>();
     };
 
-    Process *getNextProcess()
+    virtual void addProcess(Process *p)
     {
-        if (!runQueue->empty())
-        {
-            Process *p = runQueue->top();
-            runQueue->pop();
-        }
-        return nullptr;
-    }
+        runQueue->push_front(p);
+    };
 
-    bool isPreemptive()
+//    virtual Process *getNextProcess()
+//    {
+//        Process *p;
+//        if (!runQueue->empty())
+//        {
+//            p = runQueue->front();
+//            runQueue->pop_front();
+//        }
+//
+//        return p;
+//    }
+
+    virtual bool isPreemptive()
     {
         return false;
     }

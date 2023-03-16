@@ -55,6 +55,8 @@ public:
             n->next = sentinem;
             n->prev = sentinem;
             size++;
+            std::string evtQafter = this->toString();
+            std::cout << " " << evtQbefore << " ==> " << evtQafter << std::endl;
             // display();
             return;
         }
@@ -68,7 +70,6 @@ public:
         }
 
         Node *n = new Node(data);
-
         n->next = curr;
         n->prev = curr->prev;
         curr->prev->next = n;

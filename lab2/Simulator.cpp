@@ -76,7 +76,7 @@ public:
         sflag = 0;
         maxprio = 4;
         sType = FCFS;
-        while ((c = getopt(argc, argv, ":svtepisREP1234567890")) != -1)
+        while ((c = getopt(argc, argv, ":svtepisFLSREP1234567890")) != -1)
         {
             switch (c)
             {
@@ -100,10 +100,13 @@ public:
                 break;
             case 'F':
                 sType = FCFS;
+                break;
             case 'L':
                 sType = LCFS;
+                break;
             case 'S':
                 sType = SRTF;
+                break;
             case 'R':
                 sType = RR;
                 if (sscanf(argv[optind], "-sP%d:%d", &quantum, &maxprio) == -1)
@@ -235,14 +238,11 @@ public:
             procs->push_back(process);
             Event *newevent = new Event(info[0], id, TRANS_TO_READY, process);
             eventQ->put(newevent);
-
             id++;
         }
 //        cout << "Processes in simulator:" << endl;
         // showProcs();
         procFile.close();
-
-        // Scheduler Initialiaztion
         switch (sType)
         {
         case FCFS:
@@ -369,6 +369,7 @@ public:
                     }
                     else
                     {
+                        stateChangeLog(prevStatet, BLOCKED, timeInPrevState, process);
                         std::cout << "FINISHED: PID=" << process->id << std::endl;
                     }
                 }
@@ -385,7 +386,7 @@ public:
 
             if (CALL_SCHEDULER)
             {
-                scheduler->runQueueLog();
+//                scheduler->runQueueLog();
                 if (eventQ->getNextEventTime() == currTime)
                     continue;
 
