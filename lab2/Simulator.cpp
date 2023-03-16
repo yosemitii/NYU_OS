@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <cstring>
-#include "olist.h"
+#include "des.cpp"
 #include "utils.h"
 
 using namespace std;
@@ -30,6 +30,7 @@ public:
     RandGenerator *rgen;
     vector<Process *> *procs;
     OrderedList<Event *> *eventQ;
+    Process *CURRENT_RUNNING_PROCESS;
 
     Simulator()
     {
@@ -61,7 +62,7 @@ public:
 
     void init(int argc, char **argv)
     {
-        std::cout << "=======Initialization start=======" << std::endl;
+        std::cout << "=========Initialization start=========" << std::endl;
         // cout << argv[0] << argv[1] << argv[2] << argv[3] << endl;
         // Option reader
         int c;
@@ -105,7 +106,13 @@ public:
                 sType = SRTF;
             case 'R':
                 sType = RR;
-                sscanf(argv[optind], "-sR%d", &quantum);
+                if (sscanf(argv[optind], "-sP%d:%d", &quantum, &maxprio) == -1)
+                {
+                    if (sscanf(argv[optind], "-sP%d", &quantum) == -1)
+                    {
+                        std::cout << "Error: Need at least one argument.";
+                    }
+                };
                 break;
             case 'P':
                 sType = PRIO;
@@ -222,22 +229,16 @@ public:
                     }
                 index++;
             }
-            // cout << info[0] << info[1] << info[2] << info[3] << endl;
-            // cout << "checkpoint 0" <<endl;
+
             int prio = rgen->myrandom(maxprio) - 1;
-            // cout << "checkpoint 1" <<endl;
             Process *process = new Process(id, info[0], info[1], info[2], info[3], prio);
-            // cout << "here 2" <<endl;
-            // process->show();
-            // process->show();
             procs->push_back(process);
-
             Event *newevent = new Event(info[0], id, TRANS_TO_READY, process);
-
             eventQ->put(newevent);
+
             id++;
         }
-        cout << "Processes in simulator:" << endl;
+//        cout << "Processes in simulator:" << endl;
         // showProcs();
         procFile.close();
 
@@ -247,91 +248,117 @@ public:
         case FCFS:
             scheduler = new FIFO();
             break;
+        case LCFS:
+            scheduler = new LIFO();
+            break;
+        case SRTF:
+            scheduler = new class SRTF();
+            break;
+        case RR:
+            scheduler = new class RR(quantum);
+            break;
+        case PRIO:
+            scheduler = new class PRIO(quantum, maxprio);
+            break;
+        case PREPRIO:
+            scheduler = new class PREPRIO(quantum, maxprio);
+            break;
         default:
             scheduler = new FIFO();
             std::cout << "WARNING: NO SCHEDULER TYPE. SET AS FIFO." << std::endl;
-
             break;
         }
     }
 
     void simulation()
     {
-        std::cout << "========Simulatio start:========" << endl;
+        std::cout << "\n========Simulatio start:========" << endl;
 
         while (eventQ->size != 0)
         {
-            eventQ->display();
+//            eventQ->display();
+            //Parse event
             Event *evt = eventQ->get();
             Process *process = evt->proc;
-            // process->show();
             currTime = evt->timestamp;
             int transition = evt->transition;
             int timeInPrevState = currTime - process->timestamp;
             ProcState prevStatet = process->pState;
             delete evt;
             evt = nullptr;
+
+            //Control parameter
             bool CALL_SCHEDULER = false;
             Event *newEvent;
             int nextTimeStamp;
+
             // Handler: Set Time
-            scheduler->setTimestamp(currTime);
+            scheduler->timestamp = currTime;
             process->timestamp = currTime;
             if (currTime >= 250)
             {
                 return;
             }
+
+            //Definition for control flow:
+            int preemptTime;
             switch (transition)
             {
             case TRANS_TO_READY:
                 if (process->pState == CREATED || process->pState == BLOCKED)
                 {
-                    cout << "TRANS TO READY" << endl;
+//                    std::cout << "TRANS TO READY" << std::endl;
                     stateChangeLog(prevStatet, READY, timeInPrevState, process);
-                    // add to ready q
                     process->pState = READY;
                     scheduler->addProcess(process);
-                    newEvent = new Event(currTime, process->id, TRANS_TO_RUN, process);
-                    eventQ->put(newEvent);
-                    // newEvent = nullptr;
+                    nextTimeStamp = 0;
+                    CALL_SCHEDULER = true;
+                    // newEvent = new Event(currTime, process->id, TRANS_TO_RUN, process);
+                    // eventQ->put(newEvent);
                 }
                 break;
             case TRANS_TO_PREEMPT:
                 if (process->pState == RUNNG)
                 {
                     process->pState = BLOCKED;
-                    scheduler->preempt();
+                    CURRENT_RUNNING_PROCESS = nullptr;
+                    CALL_SCHEDULER = true;
                 }
                 break;
             case TRANS_TO_RUN:
-                cout << "TRANS TO RUN" << endl;
-
-                // process->pState = RUNNG;
-                scheduler->run();
-                // if (process->pState != RUNNG)
-                // {
-                //     newEvent = new Event(currTime + 1,
-                //                          process->id, TRANS_TO_RUN, process);
-                //     eventQ->put(newEvent);
-                //     break;
-                // }
+//                cout << "TRANS TO RUN" << endl;
+                // scheduler->run();
+                CURRENT_RUNNING_PROCESS = process;
+                process->pState = RUNNG;
                 nextTimeStamp = rgen->myrandom(process->cpuBurst);
                 nextTimeStamp = std::min(nextTimeStamp, process->totalTime);
-                // std::cout << "CPU burst: " << nextTimeStamp << std::endl;
-                newEvent = new Event(currTime + nextTimeStamp,
-                                     process->id, TRANS_TO_BLOCK, process);
-                stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp);
-                eventQ->put(newEvent);
-                // create event for either preemption or blocking
+                if (scheduler->isPreemptive()) {
+                    preemptTime = quantum - (currTime % quantum);
+                    if (preemptTime < nextTimeStamp) {
+                        newEvent = new Event(currTime + preemptTime,
+                                             process->id, TRANS_TO_PREEMPT, process);
+                        stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, preemptTime);
+                    } else {
+                        newEvent = new Event(currTime + nextTimeStamp,
+                                             process->id, TRANS_TO_BLOCK, process);
+                        stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp);
+                    }
+                    eventQ->put(newEvent);
+                } else {
+
+                    newEvent = new Event(currTime + nextTimeStamp,
+                                         process->id, TRANS_TO_BLOCK, process);
+                    stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp);
+                    eventQ->put(newEvent);
+                }
                 break;
             case TRANS_TO_BLOCK:
-
-                cout << "TRANS TO BLOCK" << endl;
+//                std::cout << "TRANS TO BLOCK" << std::endl;
                 if (process->pState == RUNNG)
                 {
                     process->totalTime -= timeInPrevState;
                     process->pState = BLOCKED;
-                    scheduler->block();
+                    CURRENT_RUNNING_PROCESS = nullptr;
                     if (process->totalTime > 0)
                     {
                         nextTimeStamp = rgen->myrandom(process->ioBurst);
@@ -347,7 +374,7 @@ public:
                 }
                 else
                 {
-                    cout << "ERROR: TRANS_TO_BLOCKD, Process is not running" << endl;
+                   std::cout << "ERROR: TRANS_TO_BLOCKD, Process is not running" << std::endl;
                 }
                 // create an event for when process becomes READY again
                 CALL_SCHEDULER = true;
@@ -359,19 +386,20 @@ public:
             if (CALL_SCHEDULER)
             {
                 scheduler->runQueueLog();
-                CALL_SCHEDULER = false;
-                
                 if (eventQ->getNextEventTime() == currTime)
                     continue;
-                Process *currRunngProc;
-                if (scheduler->getCurrRunngProc() == nullptr)
+
+                CALL_SCHEDULER = false;
+
+                if (CURRENT_RUNNING_PROCESS == nullptr)
                 {
-                    currRunngProc = scheduler->getNextProcess();
-                    if (currRunngProc == nullptr) {
+                    CURRENT_RUNNING_PROCESS = scheduler->getNextProcess();
+                    if (CURRENT_RUNNING_PROCESS == nullptr) {
                         continue;
                     } else {
-                        currRunngProc->show();
-                        Event *newEvent = new Event(currTime, currRunngProc->id, TRANS_TO_READY, currRunngProc);
+                        // CURRENT_RUNNING_PROCESS->show();
+                        //This case is for switching running process.
+                        Event *newEvent = new Event(currTime, CURRENT_RUNNING_PROCESS->id, TRANS_TO_RUN, CURRENT_RUNNING_PROCESS);
                         eventQ->put(newEvent);
                     }
                 }

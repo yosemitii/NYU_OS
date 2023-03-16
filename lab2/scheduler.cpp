@@ -4,11 +4,14 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <stack>
 #include <list>
 #include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include "utils.h"
+#include <sstream>
+#include <iostream>
 
 extern void __error(int errcode);
 
@@ -37,42 +40,40 @@ public:
     RandGenerator() {}
     RandGenerator(std::string filename)
     {
-        ifstream inFile;
-        inFile.open(filename);
+        ifstream rFile;
+        rFile.open(filename);
         std::string line;
         size = 0;
         vector<int> numVec;
-        getline(inFile, line);
+        getline(rFile, line);
         try
         {
             size = stoi(line);
         }
         catch (exception &err)
         {
-            // TODO: There could be empty line problem.
-            std::cout << "ERROR: File:" << filename << " Line: " << line << std::endl;
-            // __error(0);
+            std::cout << "ERROR: Open file error:" << filename << " Line: " << line << std::endl;
             exit(1);
         }
         randvals = new int[size];
         int index = 0;
-        while (!inFile.eof())
+        while (!rFile.eof())
         {
-            getline(inFile, line);
+            getline(rFile, line);
             try
             {
                 // numVec.push_back(stoi(line));
                 randvals[index] = stoi(line);
+//                cout << line << endl;
                 index++;
             }
             catch (exception &err)
             {
-                // TODO: There could be empty line problem.
                 break;
             }
         }
         // randvals = &numVec[0];
-        inFile.close();
+        rFile.close();
     }
 
     int myrandom(int burst)
@@ -95,8 +96,10 @@ public:
     int arrivTime;
     int totalTime;
     int cpuBurst;
+    int cpuBurstRemain;
     int ioBurst;
     int prio;
+    int dynamicPrio;
     int timestamp;
     ProcState pState;
     Process(int id, int at, int tc, int cb, int io, int prio)
@@ -109,11 +112,17 @@ public:
         this->prio = prio;
         this->timestamp = this->arrivTime;
         this->pState = CREATED;
+        this->dynamicPrio = this->prio - 1;
     }
     void show()
     {
         printf("ID: %d, ArrTime: %d, Total: %d, CPU: %d, IO: %d, Prio: %d, TS:%d, State:%d\n",
                id, arrivTime, totalTime, cpuBurst, ioBurst, prio, timestamp, pState);
+    }
+    std::string toString() {
+        ostringstream os;
+        os << "ID: " << id << "TimeStamp: " << timestamp << "Static Prio: " << prio << "Dynamic Prio: " << dynamicPrio;
+        return os.str();
     }
 };
 #endif
@@ -121,126 +130,332 @@ public:
 #define SCHEDULER
 class Scheduler
 {
-protected:
-    std::queue<Process *> *readyQueue;
-    std::queue<Process *> *runQueue;
-    std::queue<Process *> *expiredQueue;
-    int timestamp;
-    int CPULimit;
 
 public:
-    Scheduler()
+    int timestamp;
+    int CPULimit;
+    explicit Scheduler()
     {
         CPULimit = 1;
-        readyQueue = new std::queue<Process *>();
-        runQueue = new std::queue<Process *>();
-        expiredQueue = new std::queue<Process *>();
     }
     virtual void addProcess(Process *p) = 0;
     virtual Process *getNextProcess() = 0;
-    virtual Process *preempt() = 0;
-    virtual Process *run() = 0;
-    virtual Process *block() = 0;
-    virtual Process *getCurrRunngProc() = 0;
-    virtual void setTimestamp(int t)
-    {
-        this->timestamp = t;
-    }
-    virtual void runQueueLog()
-    {
-        printf("SCHED(%d)", runQueue->size());
-        Process *head = runQueue->front();
-        if (runQueue->size() == 1) {
-            std::cout << head->id << ":" << head->id << std::endl;
-        }
-    }
+    virtual bool isPreemptive() = 0;
+    virtual void runQueueLog(){
+
+    };
     // virtual void runQueue() = 0;
 };
 
+// class FIFO : public Scheduler
+// {
+// public:
+//     FIFO() : Scheduler(){};
+
+// void addProcess(Process *p)
+// {
+//     // readyQueue->push(p);
+// };
+// Process *getNextProcess()
+// {
+//     if (readyQueue->empty())
+//         return nullptr;
+//     Process *p = readyQueue->front();
+//     readyQueue->pop();
+//     return p;
+//     return nullptr;
+// };
+// Process *preempt()
+// {
+//     Process *p = runQueue->front();
+//     runQueue->pop();
+//     expiredQueue->push(p);
+//     return p;
+// }
+// Process *run()
+// {
+//     Process *p;
+//     if (!readyQueue->empty())
+//     {
+//         p = readyQueue->front();
+//         if (runQueue->size() < CPULimit)
+//         {
+//             readyQueue->pop();
+//             runQueue->push(p);
+//             p->pState = RUNNG;
+//         }
+//         return p;
+//     }
+//     else
+//     {
+//         std::cout << "WARNING: Ready Queue is empty." << endl;
+//         return nullptr;
+//     }
+// }
+
+//     virtual Process *block()
+//     {
+//         Process *p;
+//         if (!runQueue->empty())
+//         {
+//             p = runQueue->front();
+//             runQueue->pop();
+//             if (p->totalTime > 0)
+//             {
+//                 expiredQueue->push(p);
+//             }
+//             return p;
+//         }
+//         else
+//         {
+//             cout << "WARNING: Run Queue is empty." << endl;
+//             return nullptr;
+//         }
+//     }
+
+//     Process *getCurrRunngProc()
+//     {
+//         if (runQueue->empty())
+//         {
+//             return nullptr;
+//         }
+//         else
+//         {
+//             return runQueue->front();
+//         }
+//     }
+// };
+
 class FIFO : public Scheduler
 {
+private:
+    std::queue<Process *> *runQueue;
+
 public:
-    FIFO() : Scheduler(){};
+    FIFO() : Scheduler(){
+        runQueue = new std::queue<Process*>();
+    };
+    
+    void addProcess(Process *p)
+    {
+        runQueue->push(p);
+    };
+
+    Process *getNextProcess()
+    {
+        if (!runQueue->empty())
+        {
+            Process *p = runQueue->front();
+            runQueue->pop();
+            return p;
+        }
+        return nullptr;
+    }
+
+    bool isPreemptive()
+    {
+        return false;
+    }
+
+    void runQueueLog(){
+        printf("SCHED (%d)", runQueue->size());
+        Process *head = runQueue->front();
+        if (runQueue->size() == 1)
+        {
+            std::cout << head->id << ":" << head->id << std::endl;
+        }
+    }
+};
+
+
+class LIFO : public Scheduler
+{
+private:
+    std::stack<Process *> *runQueue;
+
+public:
+    LIFO() : Scheduler()
+    {
+        runQueue = new std::stack<Process*>();
+    };
+    void addProcess(Process *p)
+    {
+        runQueue->push(p);
+    };
+
+    Process *getNextProcess()
+    {
+        if (!runQueue->empty())
+        {
+            Process *p = runQueue->top();
+            runQueue->pop();
+        }
+        return nullptr;
+    }
+
+    bool isPreemptive()
+    {
+        return false;
+    }
+};
+
+class SRTF : public Scheduler
+{
+private:
+    std::deque<Process *> *runQueue;
+
+public:
+    SRTF() : Scheduler()
+    {
+        runQueue = new std::deque<Process*>();
+    };
 
     void addProcess(Process *p)
     {
-        readyQueue->push(p);
+        runQueue->push_back(p);
+        sortQueue();
     };
+
     Process *getNextProcess()
     {
-        if (readyQueue->empty())
-            return nullptr;
-        Process *p = readyQueue->front();
-        readyQueue->pop();
-        return p;
-    };
-    Process *preempt()
-    {
-        Process *p = runQueue->front();
-        runQueue->pop();
-        expiredQueue->push(p);
-        return p;
-    }
-    Process *run()
-    {
-        Process *p;
-        if (!readyQueue->empty())
-        {
-            p = readyQueue->front();
-            if (runQueue->size() < CPULimit) {
-                readyQueue->pop();
-                runQueue->push(p);
-                p->pState = RUNNG;
-            }
-            return p;
-        }
-        else
-        {
-            std::cout << "WARNING: Ready Queue is empty." << endl;
-            return nullptr;
-        }
-    }
-
-    virtual Process *block()
-    {
-        Process *p;
         if (!runQueue->empty())
         {
-            p = runQueue->front();
-            runQueue->pop();
-
-            // if (!readyQueue->empty()) {
-            //     run();
-            // }
-            // int timeUsed = timestamp - p->timestamp;
-            // cout << "Time used: " << timeUsed << endl;
-            // p->totalTime -= timeUsed;
-            // cout << "Time left: " << p->totalTime << endl;
-            if (p->totalTime > 0)
-            {
-                expiredQueue->push(p);
-            }
+            Process *p = runQueue->front();
+            runQueue->pop_front();
             return p;
         }
-        else
+        return nullptr;
+    }
+
+    bool isPreemptive()
+    {
+        return false;
+    }
+
+    int minIndex(int sortedIndex)
+    {
+        int min_index = -1;
+        int min_val = INT_MAX;
+        int n = runQueue->size();
+        for (int i=0; i < n; i++)
         {
-            cout << "WARNING: Run Queue is empty." << endl;
-            return nullptr;
+            Process *curr = runQueue->front();
+            runQueue->pop_front();  // This is dequeue() in C++ STL
+
+            // we add the condition i <= sortedIndex
+            // because we don't want to traverse
+            // on the sorted part of the queue,
+            // which is the right part.
+            if (curr->totalTime <= min_val && i <= sortedIndex)
+            {
+                min_index = i;
+                min_val = curr->totalTime;
+            }
+            runQueue->push_back(curr);  // This is enqueue() in
+            // C++ STL
         }
+        return min_index;
     }
 
-    Process *getCurrRunngProc() {
-        if (runQueue->empty()){
-            return nullptr;
+// Moves given minimum element to rear of
+// queue
+    void insertMinToRear(int min_index)
+    {
+        Process * min_process;
+
+        int n = runQueue->size();
+        for (int i = 0; i < n; i++)
+        {
+            Process *curr = runQueue->front();
+            runQueue->pop_front();
+            if (i != min_index)
+                runQueue->push_back(curr);
+            else
+                min_process = curr;
         }
-        else {
-            return runQueue->front();
-        }
+        runQueue->push_back(min_process);
     }
 
-    // FIFO(RandGenerator &rgen, string inputFile, int maxprio) : Scheduler(rgen, inputFile, 0, maxprio){};
+    void sortQueue()
+    {
+        for (int i = 1; i <= runQueue->size(); i++)
+        {
+            int min_index = minIndex(runQueue->size() - i);
+            insertMinToRear(min_index);
+        }
+    }
 };
 
+
+class RR : public Scheduler
+{
+private:
+    std::queue<Process *> *runQueue;
+    int quantum;
+
+public:
+    RR(int q) {
+        quantum = q;
+    }
+    virtual void addProcess(Process *p) {
+        runQueue->push(p);
+    };
+    virtual Process *getNextProcess() {
+        Process *p = runQueue->front();
+        runQueue->pop();
+        return p;
+    };
+    virtual bool isPreemptive() {
+        return true;
+    };
+};
+
+class PRIO : public Scheduler
+{
+private:
+    std::queue<Process *> *runQueue;
+    int quantum;
+    int maxprio;
+
+public:
+    PRIO(int q, int mp) : Scheduler(){
+        this->quantum = q;
+        this->maxprio = mp;
+    }
+    virtual void addProcess(Process *p) {
+//        runQueue->push(p);
+    };
+    virtual Process *getNextProcess() {
+//        Process *p = runQueue->front();
+//        runQueue->pop();
+//        return p;
+    };
+    virtual bool isPreemptive() {
+        return true;
+    };
+};
+
+class PREPRIO : public PRIO
+{
+private:
+    std::queue<Process *> *runQueue;
+    int quantum;
+    int maxprio;
+
+public:
+    PREPRIO(int q, int mp) : PRIO(q, mp){}
+    virtual void addProcess(Process *p) {
+//        runQueue->push(p);
+    };
+    virtual Process *getNextProcess() {
+//        Process *p = runQueue->front();
+//        runQueue->pop();
+//        return p;
+    };
+    virtual bool isPreemptive() {
+        return true;
+    };
+};
 #endif
 
 #ifndef EVENT
@@ -273,11 +488,14 @@ public:
         this->proc = p;
     };
 
-    void toString()
+    std::string toString()
     {
+        ostringstream os;
         // printf("[%d, %d]", startTime, procID);
-        std::cout << "[" << timestamp << "," << procID << "," << EventToString(transition) << "]";
+        os << "(" << timestamp << "," << procID << "," << EventToString(transition) << ")";
+        return os.str();
     }
+
 
     inline bool operator>=(Event *b)
     {

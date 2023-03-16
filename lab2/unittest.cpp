@@ -1,4 +1,4 @@
-#include "olist.h"
+#include "des.cpp"
 void olistTest()
 {
 
@@ -19,7 +19,7 @@ void olistTest()
     ol.get();
     ol.get();
     ol.display();
-    ol.remove(10, 1);
+    ol.remove(1);
     ol.display();
     
 }
