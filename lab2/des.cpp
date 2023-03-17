@@ -90,6 +90,8 @@ public:
     }
 
     int remove(int procID){
+        printf("RemoveEvent(%d)", procID);
+        std::string prevState = toString();
         Node *curr = sentinem->next;
         while (curr != sentinem) {
             if (curr->data->procID == procID) {
@@ -106,6 +108,8 @@ public:
         next->prev = prev;
         curr->~Node();
         size--;
+        std::string afterState = toString();
+        std::cout << prevState << " ==> " << afterState << std::endl;
         return 1;
     }
 

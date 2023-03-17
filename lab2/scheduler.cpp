@@ -140,7 +140,7 @@ public:
     }
     virtual void addProcess(Process *p) = 0;
     virtual Process *getNextProcess() = 0;
-    virtual int isPreemptive() = 0;
+    virtual bool isPreemptive() = 0;
     virtual void runQueueLog(){};
     // virtual void runQueue() = 0;
 };
@@ -157,6 +157,7 @@ public:
     
     virtual void addProcess(Process *p)
     {
+        p->pState = READY;
         p->dynamicPrio = p->prio - 1;
         runQueue->push_back(p);
     };
@@ -175,9 +176,9 @@ public:
         return p;
     }
 
-    int isPreemptive()
+    bool isPreemptive()
     {
-        return 0;
+        return false;
     }
 
     void runQueueLog(){
@@ -228,13 +229,13 @@ public:
         return p;
     }
 
-    int isPreemptive()
+    bool isPreemptive()
     {
-        return 0;
+        return false;
     }
 
     void runQueueLog(){
-        printf("SCHED (%d):", runQueue->size());
+        printf("LIFO SCHED (%d):", runQueue->size());
         if (runQueue->size() == 0) {
             std::cout << endl;
             return;
@@ -267,6 +268,7 @@ public:
 
     void addProcess(Process *p)
     {
+        p->pState = READY;
         p->dynamicPrio = p->prio - 1;
         runQueue->push_back(p);
         sortQueue();
@@ -284,9 +286,9 @@ public:
         return p;
     }
 
-    int isPreemptive()
+    bool isPreemptive()
     {
-        return 0;
+        return false;
     }
 
     int minIndex(int sortedIndex)
@@ -373,6 +375,7 @@ public:
         runQueue = new std::deque<Process *>();
     }
     virtual void addProcess(Process *p) {
+        p->pState = READY;
         p->dynamicPrio = p->prio-1;
         runQueue->push_back(p);
     };
@@ -386,8 +389,8 @@ public:
         }
         return p;
     };
-    virtual int isPreemptive() {
-        return 1;
+    virtual bool isPreemptive() {
+        return true;
     };
 
     void runQueueLog(){
@@ -431,7 +434,7 @@ public:
     }
     virtual void addProcess(Process *p) {
 //        std::deque<Process *>* d = activeQ->at(1);
-
+        p->pState = READY;
         if (p->dynamicPrio < 0) {
             p->dynamicPrio = p->prio-1;
             expiredQ->at(p->dynamicPrio).push_back(p);
@@ -463,8 +466,8 @@ public:
         return res;
     };
 
-    virtual int isPreemptive() {
-        return 1;
+    virtual bool isPreemptive() {
+        return true;
     };
 
     void switchQ() {
@@ -519,7 +522,8 @@ public:
         }
     }
     virtual void addProcess(Process *p) {
-
+        if (p->pState == BLOCKED) p->dynamicPrio = p->prio-1;
+        p->pState = READY;
         if (p->dynamicPrio < 0) {
             p->dynamicPrio = p->prio-1;
             expiredQ->at(p->dynamicPrio).push_back(p);
@@ -551,8 +555,8 @@ public:
         return res;
     };
 
-    virtual int isPreemptive() {
-        return 2;
+    virtual bool isPreemptive() {
+        return true;
     };
 
     void switchQ() {

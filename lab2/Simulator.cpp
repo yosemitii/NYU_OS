@@ -304,7 +304,7 @@ public:
                 {
 //                    std::cout << "TRANS TO READY" << std::endl;
                     stateChangeLog(prevStatet, READY, timeInPrevState, process);
-                    process->pState = READY;
+
                     scheduler->addProcess(process);
                     nextTimeStamp = 0;
                     CALL_SCHEDULER = true;
@@ -422,6 +422,8 @@ public:
 
             if (CALL_SCHEDULER)
             {
+                //for PREPRIO only
+
 //                scheduler->runQueueLog();
                 if (eventQ->getNextEventTime() == currTime)
                     continue;
@@ -438,6 +440,14 @@ public:
                         //This case is for switching running process.
                         Event *newEvent = new Event(currTime, CURRENT_RUNNING_PROCESS->id, TRANS_TO_RUN, CURRENT_RUNNING_PROCESS);
                         eventQ->put(newEvent);
+                    }
+                } else {
+                    if (sType == PREPRIO) {
+                        if (process->pState == READY && process->dynamicPrio > CURRENT_RUNNING_PROCESS->dynamicPrio) {
+                            eventQ->remove(CURRENT_RUNNING_PROCESS->id);
+                            newEvent = new Event(currTime, CURRENT_RUNNING_PROCESS->id, TRANS_TO_PREEMPT, CURRENT_RUNNING_PROCESS);
+                            eventQ->put(newEvent);
+                        }
                     }
                 }
             }
