@@ -39,7 +39,7 @@ public:
     void put(T &data)
     {
         std::string evtQbefore = this->toString();
-        printf("AddEvent(%d, %d, %s)", data->proc->timestamp, data->proc->id, EventToString(data->transition));
+        printf("\tAddEvent(%d, %d, %s)", data->timestamp, data->proc->id, EventToString(data->transition));
 //        std::cout << "AddEvent" << data->toString();
 
         // data->proc->show();

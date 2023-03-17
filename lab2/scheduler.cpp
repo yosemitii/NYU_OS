@@ -160,8 +160,9 @@ public:
         runQueue->push_back(p);
     };
 
-    Process *getNextProcess()
+    virtual Process *getNextProcess()
     {
+        runQueueLog();
         Process *p = nullptr;
         if (!runQueue->empty())
         {
@@ -169,7 +170,7 @@ public:
             runQueue->pop_front();
 
         }
-        runQueueLog();
+
         return p;
     }
 
@@ -179,7 +180,7 @@ public:
     }
 
     void runQueueLog(){
-        printf("SCHED (%d):", runQueue->size());
+        printf("FIFO SCHED (%d):", runQueue->size());
         if (runQueue->size() == 0) return;
         Process *head = runQueue->front();
         std::cout << head->id << ":" << head->timestamp << " ";
@@ -197,13 +198,13 @@ public:
 };
 
 
-class LIFO : public FIFO
+class LIFO : public Scheduler
 {
 private:
     std::deque<Process *> *runQueue;
 
 public:
-    LIFO() : FIFO()
+    LIFO(): Scheduler()
     {
         runQueue = new std::deque<Process*>();
     };
@@ -213,31 +214,51 @@ public:
         runQueue->push_front(p);
     };
 
-//    virtual Process *getNextProcess()
-//    {
-//        Process *p;
-//        if (!runQueue->empty())
-//        {
-//            p = runQueue->front();
-//            runQueue->pop_front();
-//        }
-//
-//        return p;
-//    }
+    virtual Process *getNextProcess()
+    {
+        runQueueLog();
+        Process *p = nullptr;
+        if (!runQueue->empty())
+        {
+            p = runQueue->front();
+            runQueue->pop_front();
+        }
+        return p;
+    }
 
-    virtual bool isPreemptive()
+    bool isPreemptive()
     {
         return false;
     }
+
+    void runQueueLog(){
+        printf("LIFO SCHED (%d):", runQueue->size());
+        if (runQueue->size() == 0) {
+            std::cout << endl;
+            return;
+        }
+        Process *head = runQueue->front();
+        std::cout << head->id << ":" << head->timestamp << " ";
+        runQueue->pop_front();
+        runQueue->push_back(head);
+        Process *curr = runQueue->front();
+        while (curr != head) {
+            std::cout << curr->id << ":" << curr->timestamp << " ";
+            runQueue->pop_front();
+            runQueue->push_back(curr);
+            curr = runQueue->front();
+        }
+        std::cout << std::endl;
+    }
 };
 
-class SRTF : public Scheduler
+class SRTF : public FIFO
 {
 private:
     std::deque<Process *> *runQueue;
 
 public:
-    SRTF() : Scheduler()
+    SRTF() : FIFO()
     {
         runQueue = new std::deque<Process*>();
     };
@@ -248,15 +269,16 @@ public:
         sortQueue();
     };
 
-    Process *getNextProcess()
+    virtual Process *getNextProcess()
     {
+        runQueueLog();
+        Process *p = nullptr;
         if (!runQueue->empty())
         {
-            Process *p = runQueue->front();
+            p = runQueue->front();
             runQueue->pop_front();
-            return p;
         }
-        return nullptr;
+        return p;
     }
 
     bool isPreemptive()
@@ -315,6 +337,23 @@ public:
             int min_index = minIndex(runQueue->size() - i);
             insertMinToRear(min_index);
         }
+    }
+
+    void runQueueLog(){
+        printf("FIFO SCHED (%d):", runQueue->size());
+        if (runQueue->size() == 0) return;
+        Process *head = runQueue->front();
+        std::cout << head->id << ":" << head->timestamp << " ";
+        runQueue->pop_front();
+        runQueue->push_back(head);
+        Process *curr = runQueue->front();
+        while (curr != head) {
+            std::cout << curr->id << ":" << curr->timestamp << " ";
+            runQueue->pop_front();
+            runQueue->push_back(curr);
+            curr = runQueue->front();
+        }
+        std::cout << std::endl;
     }
 };
 

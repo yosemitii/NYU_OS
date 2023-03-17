@@ -285,7 +285,6 @@ public:
             int timeInPrevState = currTime - process->timestamp;
             ProcState prevStatet = process->pState;
             delete evt;
-            evt = nullptr;
 
             //Control parameter
             bool CALL_SCHEDULER = false;
@@ -295,10 +294,6 @@ public:
             // Handler: Set Time
             scheduler->timestamp = currTime;
             process->timestamp = currTime;
-            if (currTime >= 250)
-            {
-                return;
-            }
 
             //Definition for control flow:
             int preemptTime;
@@ -320,9 +315,15 @@ public:
             case TRANS_TO_PREEMPT:
                 if (process->pState == RUNNG)
                 {
-                    process->pState = BLOCKED;
+                    process->pState = READY;
+                    stateChangeLog(prevStatet, READY, timeInPrevState, process);
+                    process->dynamicPrio -= 1;
+                    scheduler->addProcess(process);
                     CURRENT_RUNNING_PROCESS = nullptr;
+
                     CALL_SCHEDULER = true;
+                } else {
+                    std::cout << "ERROR: PREEMPT MUST COME FROM RUNNIGN" << std::endl;
                 }
                 break;
             case TRANS_TO_RUN:
@@ -370,7 +371,7 @@ public:
                     else
                     {
                         stateChangeLog(prevStatet, BLOCKED, timeInPrevState, process);
-                        std::cout << "FINISHED: PID=" << process->id << std::endl;
+                        std::cout << "DONE: " << process->id << std::endl;
                     }
                 }
                 else
