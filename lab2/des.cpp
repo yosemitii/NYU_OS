@@ -141,10 +141,26 @@ public:
         }
     }
 
-    EventType peekNextEventType() {
-        Node *head = sentinem->next;
-        return head->data->transition;
+    Event *peek() {
+        if (size > 0){
+            Node *head = sentinem->next;
+            return head->data;
+        } else {
+            return nullptr;
+        }
+    }
 
+    vector<Event *> *getAllEventByTime(int t) {
+        vector<Event *> *res = new vector<Event *>;
+        if (size == 0) return res;
+        Node *curr = sentinem->next;
+        while (curr != sentinem) {
+            if (curr->data->timestamp == t) {
+                res->push_back((Event *) curr->data);
+            }
+            curr = curr->next;
+        }
+        return res;
     }
 
     std::string toString() {

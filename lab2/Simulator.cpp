@@ -277,11 +277,12 @@ public:
             int transition = evt->transition;
             int timeInPrevState = currTime - process->timestamp;
             int prevTime = process->timestamp;
-            ProcState prevStatet = process->pState;
+            ProcState prevState = process->pState;
             delete evt;
 
             //Control parameter
             bool CALL_SCHEDULER = false;
+            bool PREPRIO_PREEMT_FINISHED = false;
             Event *newEvent;
             int nextTimeStamp;
 
@@ -289,18 +290,21 @@ public:
             scheduler->timestamp = currTime;
             process->timestamp = currTime;
 
+//            if (currTime >= 2159) {
+//                cout << "2159" << endl;
+//            }
 //            int preemptTime;
             switch (transition)
             {
             case TRANS_TO_READY:
                 if (process->pState == CREATED || process->pState == BLOCKED)
                 {
-                    if(prevStatet == BLOCKED) {
+                    if(prevState == BLOCKED) {
                         process->ioWaitTime += timeInPrevState;
                         process->ioWaitPeriod->push_back(new int[]{prevTime, currTime});
                     }
 //                    std::cout << "TRANS TO READY" << std::endl;
-                    stateChangeLog(prevStatet, READY, timeInPrevState, process, 0, vflag);
+                    stateChangeLog(prevState, READY, timeInPrevState, process, 0, vflag);
 
                     scheduler->addProcess(process);
                     nextTimeStamp = 0;
@@ -316,7 +320,7 @@ public:
                     process->pState = READY;
                     process->totalTime -= timeInPrevState;
                     process->cpuBurstRemain -= timeInPrevState;
-                    stateChangeLog(prevStatet, READY, timeInPrevState, process, 0, vflag);
+                    stateChangeLog(prevState, READY, timeInPrevState, process, 0, vflag);
 
                     process->dynamicPrio -= 1;
                     scheduler->addProcess(process);
@@ -330,7 +334,7 @@ public:
             case TRANS_TO_RUN:
 //                cout << "TRANS TO RUN" << endl;
                 // scheduler->run();
-                if (prevStatet = READY) process->cpuWaitTime += timeInPrevState;
+                if (prevState = READY) process->cpuWaitTime += timeInPrevState;
                 CURRENT_RUNNING_PROCESS = process;
                 process->pState = RUNNG;
                 //The CPU burst this time, no matter it will be preempted or not. Only take random when the current one is exhauseted
@@ -348,11 +352,11 @@ public:
 //                            process->cpuBurstRemain = nextTimeStamp;
                             newEvent = new Event(currTime + quantum,
                                                  process->id, TRANS_TO_PREEMPT, process);
-                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, quantum, vflag);
+                            stateChangeLog(prevState, RUNNG, timeInPrevState, process, quantum, vflag);
                         } else {
                             newEvent = new Event(currTime + process->cpuBurstRemain,
                                                  process->id, TRANS_TO_BLOCK, process);
-                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, process->cpuBurstRemain, vflag);
+                            stateChangeLog(prevState, RUNNG, timeInPrevState, process, process->cpuBurstRemain, vflag);
                         }
                         eventQ->put(newEvent, eflag);
                     }
@@ -366,11 +370,11 @@ public:
                         if (quantum < nextTimeStamp) {
                             newEvent = new Event(currTime + quantum,
                                                  process->id, TRANS_TO_PREEMPT, process);
-                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, quantum, vflag);
+                            stateChangeLog(prevState, RUNNG, timeInPrevState, process, quantum, vflag);
                         } else {
                             newEvent = new Event(currTime + nextTimeStamp,
                                                  process->id, TRANS_TO_BLOCK, process);
-                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp, vflag);
+                            stateChangeLog(prevState, RUNNG, timeInPrevState, process, nextTimeStamp, vflag);
                         }
                         eventQ->put(newEvent, eflag);
                     }
@@ -381,7 +385,7 @@ public:
                     nextTimeStamp = std::min(nextTimeStamp, process->totalTime);
                     newEvent = new Event(currTime + nextTimeStamp,
                                          process->id, TRANS_TO_BLOCK, process);
-                    stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp, vflag);
+                    stateChangeLog(prevState, RUNNG, timeInPrevState, process, nextTimeStamp, vflag);
                     eventQ->put(newEvent, eflag);
                 }
                 break;
@@ -396,14 +400,14 @@ public:
                     if (process->totalTime > 0)
                     {
                         nextTimeStamp = rgen->myrandom(process->ioBurst);
-                        stateChangeLog(prevStatet, BLOCKED, timeInPrevState, process, nextTimeStamp,vflag);
+                        stateChangeLog(prevState, BLOCKED, timeInPrevState, process, nextTimeStamp, vflag);
                         newEvent = new Event(currTime + nextTimeStamp,
                                              process->id, TRANS_TO_READY, process);
                         eventQ->put(newEvent, eflag);
                     }
                     else
                     {
-                        stateChangeLog(prevStatet, DONE, timeInPrevState, process, 0, vflag);
+                        stateChangeLog(prevState, DONE, timeInPrevState, process, 0, vflag);
 //                        std::cout << "DONE: " << process->id << std::endl;
                         process->finishTime = currTime;
                     }
@@ -425,8 +429,23 @@ public:
 
 //                scheduler->runQueueLog();
                 if (eventQ->getNextEventTime() == currTime){
-                    
-                    continue;
+                    if (sType == PREPRIO && prevState == BLOCKED && process->pState == READY
+                    && !stopAt(CURRENT_RUNNING_PROCESS->id, currTime)
+                    && eventQ->peek()->procID != process->id
+                    && eventQ->peek()->procID != CURRENT_RUNNING_PROCESS->id
+                    && process->dynamicPrio > eventQ->peek()->proc->dynamicPrio) {
+                        if (CURRENT_RUNNING_PROCESS != nullptr && process->dynamicPrio > CURRENT_RUNNING_PROCESS->dynamicPrio) {
+                            eventQ->remove(CURRENT_RUNNING_PROCESS->id, eflag);
+                            newEvent = new Event(currTime, CURRENT_RUNNING_PROCESS->id, TRANS_TO_PREEMPT, CURRENT_RUNNING_PROCESS);
+                            eventQ->put(newEvent, eflag);
+                            CALL_SCHEDULER = false;
+                            PREPRIO_PREEMT_FINISHED = true;
+
+                        }
+                    } else {
+                        continue;
+                    }
+
                 }
 
 
@@ -445,9 +464,13 @@ public:
                     }
                 } else {
                     if (sType == PREPRIO && process->pState == READY && process->dynamicPrio > CURRENT_RUNNING_PROCESS->dynamicPrio) {
-                        eventQ->remove(CURRENT_RUNNING_PROCESS->id, eflag);
-                        newEvent = new Event(currTime, CURRENT_RUNNING_PROCESS->id, TRANS_TO_PREEMPT, CURRENT_RUNNING_PROCESS);
-                        eventQ->put(newEvent, eflag);
+                        if (!PREPRIO_PREEMT_FINISHED) {
+                            eventQ->remove(CURRENT_RUNNING_PROCESS->id, eflag);
+                            newEvent = new Event(currTime, CURRENT_RUNNING_PROCESS->id, TRANS_TO_PREEMPT, CURRENT_RUNNING_PROCESS);
+                            eventQ->put(newEvent, eflag);
+                        } else {
+                            PREPRIO_PREEMT_FINISHED = false;
+                        }
                         continue;
                     }
                 }
@@ -456,6 +479,19 @@ public:
 
         accounting();
     }
+
+    bool stopAt(int procID, int time) {
+        vector<Event *> *eventAtTime = eventQ->getAllEventByTime(time);
+        if (eventAtTime->size() == 0) return false;
+        for (auto e: *eventAtTime) {
+            if (e->procID == CURRENT_RUNNING_PROCESS->id && e->timestamp == time
+            && (e->transition == TRANS_TO_BLOCK || e->transition == TRANS_TO_PREEMPT)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
 
     void stateChangeLog(ProcState prev, ProcState now, int timeInPrevState, Process *p, int timeNeeded = 0, bool display = true)
