@@ -36,10 +36,10 @@ public:
         size = 0;
     };
 
-    void put(T &data)
+    void put(T &data, bool display = false)
     {
         std::string evtQbefore = this->toString();
-        printf("\tAddEvent(%d, %d, %s)", data->timestamp, data->proc->id, EventToString(data->transition));
+        if (display) printf("\tAddEvent(%d, %d, %s)", data->timestamp, data->proc->id, EventToString(data->transition));
 //        std::cout << "AddEvent" << data->toString();
 
         // data->proc->show();
@@ -55,8 +55,11 @@ public:
             n->next = sentinem;
             n->prev = sentinem;
             size++;
-            std::string evtQafter = this->toString();
-            std::cout << " " << evtQbefore << " ==> " << evtQafter << std::endl;
+            if (display) {
+                std::string evtQafter = this->toString();
+                std::cout << " " << evtQbefore << " ==> " << evtQafter << std::endl;
+            }
+
             // display();
             return;
         }
@@ -75,8 +78,9 @@ public:
         curr->prev->next = n;
         curr->prev = n;
         size++;
-        std::string evtQafter = this->toString();
-        std::cout << " " << evtQbefore << " ==> " << evtQafter << std::endl;
+        if (display) {
+            std::string evtQafter = this->toString();
+            std::cout << " " << evtQbefore << " ==> " << evtQafter << std::endl;}
         return;
     }
 
@@ -89,8 +93,8 @@ public:
         return res->data;
     }
 
-    int remove(int procID){
-        printf("RemoveEvent(%d)", procID);
+    int remove(int procID, bool display){
+        if (display) printf("RemoveEvent(%d)", procID);
         std::string prevState = toString();
         Node *curr = sentinem->next;
         while (curr != sentinem) {
@@ -108,8 +112,10 @@ public:
         next->prev = prev;
         curr->~Node();
         size--;
-        std::string afterState = toString();
-        std::cout << prevState << " ==> " << afterState << std::endl;
+        if (display) {
+            std::string afterState = toString();
+            std::cout << prevState << " ==> " << afterState << std::endl;
+        }
         return 1;
     }
 
@@ -130,11 +136,15 @@ public:
         if (size > 0) {
             Node *head = sentinem->next;
             return head->data->timestamp;
+        } else {
+            return 0;
         }
-        else
-        {
-            std::cout << "Event queue is empty" << endl;
-        }
+    }
+
+    EventType peekNextEventType() {
+        Node *head = sentinem->next;
+        return head->data->transition;
+
     }
 
     std::string toString() {

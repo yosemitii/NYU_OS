@@ -168,7 +168,7 @@ public:
         CPULimit = 1;
     }
     virtual void addProcess(Process *p) = 0;
-    virtual Process *getNextProcess() = 0;
+    virtual Process *getNextProcess(bool display) = 0;
     virtual bool isPreemptive() = 0;
     virtual void runQueueLog(){};
     // virtual void runQueue() = 0;
@@ -191,9 +191,10 @@ public:
         runQueue->push_back(p);
     };
 
-    virtual Process *getNextProcess()
+    virtual Process *getNextProcess(bool display)
     {
-        runQueueLog();
+        if (display) runQueueLog();
+
         Process *p = nullptr;
         if (!runQueue->empty())
         {
@@ -246,9 +247,9 @@ public:
         runQueue->push_front(p);
     };
 
-    virtual Process *getNextProcess()
+    virtual Process *getNextProcess(bool display)
     {
-        runQueueLog();
+        if (display) runQueueLog();
         Process *p = nullptr;
         if (!runQueue->empty())
         {
@@ -303,9 +304,9 @@ public:
         sortQueue();
     };
 
-    virtual Process *getNextProcess()
+    virtual Process *getNextProcess(bool display)
     {
-        runQueueLog();
+        if (display) runQueueLog();
         Process *p = nullptr;
         if (!runQueue->empty())
         {
@@ -324,6 +325,7 @@ public:
     {
         int min_index = -1;
         int min_val = INT_MAX;
+        int min_id = INT_MAX;
         int n = runQueue->size();
         for (int i=0; i < n; i++)
         {
@@ -334,10 +336,13 @@ public:
             // because we don't want to traverse
             // on the sorted part of the queue,
             // which is the right part.
-            if (curr->totalTime <= min_val && i <= sortedIndex)
+            if (curr->totalTime < min_val || (curr->totalTime == min_val && curr->id < min_id))
             {
-                min_index = i;
-                min_val = curr->totalTime;
+                if (i <= sortedIndex){
+                    min_index = i;
+                    min_val = curr->totalTime;
+                    min_id = curr->id;
+                }
             }
             runQueue->push_back(curr);  // This is enqueue() in
             // C++ STL
@@ -408,8 +413,8 @@ public:
         p->dynamicPrio = p->prio-1;
         runQueue->push_back(p);
     };
-    virtual Process *getNextProcess() {
-        runQueueLog();
+    virtual Process *getNextProcess(bool display) {
+        if (display) runQueueLog();
         Process *p = nullptr;
         if (!runQueue->empty())
         {
@@ -474,8 +479,8 @@ public:
 
     };
 
-    virtual Process *getNextProcess() {
-        runQueueLog();
+    virtual Process *getNextProcess(bool display) {
+        if (display) runQueueLog();
         Process *res = nullptr;
         for (int i = maxprio - 1; i >=0; i--) {
             if (activeQ->at(i).empty()) continue;
@@ -484,7 +489,8 @@ public:
             return res;
         }
         if (res == nullptr) {
-            std::cout << "switch queue" << std::endl;
+            if (display) std::cout << "switch queue" << std::endl;
+
             switchQ();
         }
         for (int i = maxprio - 1; i >=0; i--) {
@@ -563,8 +569,8 @@ public:
 
     };
 
-    virtual Process *getNextProcess() {
-        runQueueLog();
+    virtual Process *getNextProcess(bool display) {
+        if (display) runQueueLog();
         Process *res = nullptr;
         for (int i = maxprio - 1; i >=0; i--) {
             if (activeQ->at(i).empty()) continue;
@@ -573,7 +579,7 @@ public:
             return res;
         }
         if (res == nullptr) {
-            std::cout << "switch queue" << std::endl;
+            if (display) std::cout << "switch queue" << std::endl;
             switchQ();
         }
         for (int i = maxprio - 1; i >=0; i--) {

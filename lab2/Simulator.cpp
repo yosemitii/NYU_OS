@@ -18,7 +18,7 @@ extern std::string convertToString(char *a);
 class Simulator
 {
 private:
-    int vflag, tflag, eflag, pflag, iflag, sflag;
+    bool vflag, tflag, eflag, pflag, iflag, sflag;
     int quantum;
     int maxprio;
     int currTime;
@@ -62,7 +62,7 @@ public:
 
     void init(int argc, char **argv)
     {
-        std::cout << "=========Initialization start=========" << std::endl;
+//        std::cout << "=========Initialization start=========" << std::endl;
         // cout << argv[0] << argv[1] << argv[2] << argv[3] << endl;
         // Option reader
         int c;
@@ -150,13 +150,13 @@ public:
             case ':':
                 break;
             case '?':
-                fprintf(stderr, "Unknown option `-%c'.\n", optopt);
+//                fprintf(stderr, "Unknown option `-%c'.\n", optopt);
                 break;
             default:
                 abort();
             }
         }
-        std::cout << "quantum: " << quantum << " maxprio:" << maxprio << endl;
+//        std::cout << "quantum: " << quantum << " maxprio:" << maxprio << endl;
         for (index = optind; index < argc; index++)
         {
             if (fileCnt == 0)
@@ -174,10 +174,6 @@ public:
         {
             __error(1);
         }
-        // std::cout << convertToString(argv[index]) << "." << endl;
-        // printf("Non-option argument: %s.\n", convertTostd::string(argv[index]));
-        std::cout << "input file name: " << inputFile << "." << endl;
-        std::cout << "rand file name: " << randFile << "." << endl;
 
         // Random Generator Initialization.
         this->rgen = new RandGenerator(randFile);
@@ -237,7 +233,7 @@ public:
             Process *process = new Process(id, info[0], info[1], info[2], info[3], prio);
             procs->push_back(process);
             Event *newevent = new Event(info[0], id, TRANS_TO_READY, process);
-            eventQ->put(newevent);
+            eventQ->put(newevent, eflag);
             id++;
         }
 //        cout << "Processes in simulator:" << endl;
@@ -265,14 +261,14 @@ public:
             break;
         default:
             scheduler = new FIFO();
-            std::cout << "WARNING: NO SCHEDULER TYPE. SET AS FIFO." << std::endl;
+//            std::cout << "WARNING: NO SCHEDULER TYPE. SET AS FIFO." << std::endl;
             break;
         }
     }
 
     void simulation()
     {
-        std::cout << "\n========Simulatio start:========" << endl;
+//        std::cout << "\n========Simulatio start:========" << endl;
         while (eventQ->size != 0)
         {
             Event *evt = eventQ->get();
@@ -304,13 +300,12 @@ public:
                         process->ioWaitPeriod->push_back(new int[]{prevTime, currTime});
                     }
 //                    std::cout << "TRANS TO READY" << std::endl;
-                    stateChangeLog(prevStatet, READY, timeInPrevState, process);
+                    stateChangeLog(prevStatet, READY, timeInPrevState, process, 0, vflag);
 
                     scheduler->addProcess(process);
                     nextTimeStamp = 0;
                     CALL_SCHEDULER = true;
-                    // newEvent = new Event(currTime, process->id, TRANS_TO_RUN, process);
-                    // eventQ->put(newEvent);
+
                 }
                 break;
             case TRANS_TO_PREEMPT:
@@ -321,7 +316,7 @@ public:
                     process->pState = READY;
                     process->totalTime -= timeInPrevState;
                     process->cpuBurstRemain -= timeInPrevState;
-                    stateChangeLog(prevStatet, READY, timeInPrevState, process);
+                    stateChangeLog(prevStatet, READY, timeInPrevState, process, 0, vflag);
 
                     process->dynamicPrio -= 1;
                     scheduler->addProcess(process);
@@ -353,13 +348,13 @@ public:
 //                            process->cpuBurstRemain = nextTimeStamp;
                             newEvent = new Event(currTime + quantum,
                                                  process->id, TRANS_TO_PREEMPT, process);
-                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, quantum);
+                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, quantum, vflag);
                         } else {
                             newEvent = new Event(currTime + process->cpuBurstRemain,
                                                  process->id, TRANS_TO_BLOCK, process);
-                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, process->cpuBurstRemain);
+                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, process->cpuBurstRemain, vflag);
                         }
-                        eventQ->put(newEvent);
+                        eventQ->put(newEvent, eflag);
                     }
                     //The case that the cpu burst is exhausted
                     //Two sub-cases: 1. burst > quantum: PREEMT
@@ -371,13 +366,13 @@ public:
                         if (quantum < nextTimeStamp) {
                             newEvent = new Event(currTime + quantum,
                                                  process->id, TRANS_TO_PREEMPT, process);
-                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, quantum);
+                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, quantum, vflag);
                         } else {
                             newEvent = new Event(currTime + nextTimeStamp,
                                                  process->id, TRANS_TO_BLOCK, process);
-                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp);
+                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp, vflag);
                         }
-                        eventQ->put(newEvent);
+                        eventQ->put(newEvent, eflag);
                     }
 
                 } //The case of Non-preemptive.
@@ -386,8 +381,8 @@ public:
                     nextTimeStamp = std::min(nextTimeStamp, process->totalTime);
                     newEvent = new Event(currTime + nextTimeStamp,
                                          process->id, TRANS_TO_BLOCK, process);
-                    stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp);
-                    eventQ->put(newEvent);
+                    stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp, vflag);
+                    eventQ->put(newEvent, eflag);
                 }
                 break;
             case TRANS_TO_BLOCK:
@@ -401,14 +396,14 @@ public:
                     if (process->totalTime > 0)
                     {
                         nextTimeStamp = rgen->myrandom(process->ioBurst);
-                        stateChangeLog(prevStatet, BLOCKED, timeInPrevState, process, nextTimeStamp);
+                        stateChangeLog(prevStatet, BLOCKED, timeInPrevState, process, nextTimeStamp,vflag);
                         newEvent = new Event(currTime + nextTimeStamp,
                                              process->id, TRANS_TO_READY, process);
-                        eventQ->put(newEvent);
+                        eventQ->put(newEvent, eflag);
                     }
                     else
                     {
-                        stateChangeLog(prevStatet, DONE, timeInPrevState, process);
+                        stateChangeLog(prevStatet, DONE, timeInPrevState, process, 0, vflag);
 //                        std::cout << "DONE: " << process->id << std::endl;
                         process->finishTime = currTime;
                     }
@@ -424,38 +419,36 @@ public:
                 break;
             }
 
-
-
-
-
             if (CALL_SCHEDULER)
             {
                 //for PREPRIO only
 
 //                scheduler->runQueueLog();
-                if (eventQ->getNextEventTime() == currTime)
+                if (eventQ->getNextEventTime() == currTime){
+                    
                     continue;
+                }
+
 
                 CALL_SCHEDULER = false;
 
                 if (CURRENT_RUNNING_PROCESS == nullptr)
                 {
-                    CURRENT_RUNNING_PROCESS = scheduler->getNextProcess();
+                    CURRENT_RUNNING_PROCESS = scheduler->getNextProcess(tflag);
                     if (CURRENT_RUNNING_PROCESS == nullptr) {
                         continue;
                     } else {
                         // CURRENT_RUNNING_PROCESS->show();
                         //This case is for switching running process.
                         Event *newEvent = new Event(currTime, CURRENT_RUNNING_PROCESS->id, TRANS_TO_RUN, CURRENT_RUNNING_PROCESS);
-                        eventQ->put(newEvent);
+                        eventQ->put(newEvent, eflag);
                     }
                 } else {
-                    if (sType == PREPRIO) {
-                        if (process->pState == READY && process->dynamicPrio > CURRENT_RUNNING_PROCESS->dynamicPrio) {
-                            eventQ->remove(CURRENT_RUNNING_PROCESS->id);
-                            newEvent = new Event(currTime, CURRENT_RUNNING_PROCESS->id, TRANS_TO_PREEMPT, CURRENT_RUNNING_PROCESS);
-                            eventQ->put(newEvent);
-                        }
+                    if (sType == PREPRIO && process->pState == READY && process->dynamicPrio > CURRENT_RUNNING_PROCESS->dynamicPrio) {
+                        eventQ->remove(CURRENT_RUNNING_PROCESS->id, eflag);
+                        newEvent = new Event(currTime, CURRENT_RUNNING_PROCESS->id, TRANS_TO_PREEMPT, CURRENT_RUNNING_PROCESS);
+                        eventQ->put(newEvent, eflag);
+                        continue;
                     }
                 }
             }
@@ -464,20 +457,15 @@ public:
         accounting();
     }
 
-    bool anyProcWaitingIO() {
-        for (int i = 0; i < procs->size(); i++) {
-            if (procs->at(i)->pState == BLOCKED) {
-                return true;
-            }
-        }
-        return false;
-    }
 
-    void stateChangeLog(ProcState prev, ProcState now, int timeInPrevState, Process *p, int timeNeeded = 0)
+    void stateChangeLog(ProcState prev, ProcState now, int timeInPrevState, Process *p, int timeNeeded = 0, bool display = true)
     {
-
+        if (!display) return;
         printf("%d %d %d: %s->%s\t", p->timestamp, p->id, timeInPrevState, ProcToString(prev), ProcToString(now));
-        if (now == DONE) return;
+        if (now == DONE) {
+            printf("\n");
+            return;
+        }
         if (prev == READY && now == RUNNG)
         {
             printf("cb=%d rem=%d prio=%d",  p->cpuBurstRemain, p->totalTime, p->dynamicPrio);
@@ -522,18 +510,21 @@ public:
             if (a[0] != b[0]) return a[0] < b[0];
             else return a[1] < b[1];
         });
-        int startTime = periods.front()[0];
-        int endTime = periods.front()[1];
-        for (auto i: periods) {
-            if (i[0] <= endTime) {
-                endTime = max(endTime, i[1]);
-            } else {
-                macroIOWaitTime += (endTime - startTime);
-                startTime = i[0];
-                endTime = i[1];
+        if (!periods.empty()) {
+            int startTime = periods.front()[0];
+            int endTime = periods.front()[1];
+            for (auto i: periods) {
+                if (i[0] <= endTime) {
+                    endTime = max(endTime, i[1]);
+                } else {
+                    macroIOWaitTime += (endTime - startTime);
+                    startTime = i[0];
+                    endTime = i[1];
+                }
             }
+            macroIOWaitTime += (endTime - startTime);
         }
-        macroIOWaitTime += (endTime - startTime);
+
 
         double cpuUtil = 100.0 * (macroCPUTotalTime / (double) macroFinishTime);
         double ioUtil = 100.0 * (macroIOWaitTime / (double) macroFinishTime);

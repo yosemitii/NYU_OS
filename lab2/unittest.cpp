@@ -19,7 +19,7 @@ void olistTest()
     ol.get();
     ol.get();
     ol.display();
-    ol.remove(1);
+    ol.remove(1, true);
     ol.display();
     
 }

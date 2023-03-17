@@ -1,6 +1,6 @@
 all:
 
-	g++ -g main.cpp -o sche
+	g++ -std=c++11 -g main.cpp -o sched
 
 clean:
 	rm -f prog *~ *.o
