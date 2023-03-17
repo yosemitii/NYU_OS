@@ -9,6 +9,7 @@
 #include <cstring>
 #include "des.cpp"
 #include "utils.h"
+//#include <sort.h>
 
 using namespace std;
 
@@ -31,7 +32,6 @@ public:
     vector<Process *> *procs;
     OrderedList<Event *> *eventQ;
     Process *CURRENT_RUNNING_PROCESS;
-
     Simulator()
     {
         procs = new vector<Process *>();
@@ -275,13 +275,12 @@ public:
         std::cout << "\n========Simulatio start:========" << endl;
         while (eventQ->size != 0)
         {
-//            eventQ->display();
-            //Parse event
             Event *evt = eventQ->get();
             Process *process = evt->proc;
             currTime = evt->timestamp;
             int transition = evt->transition;
             int timeInPrevState = currTime - process->timestamp;
+            int prevTime = process->timestamp;
             ProcState prevStatet = process->pState;
             delete evt;
 
@@ -294,13 +293,16 @@ public:
             scheduler->timestamp = currTime;
             process->timestamp = currTime;
 
-            //Definition for control flow:
-            int preemptTime;
+//            int preemptTime;
             switch (transition)
             {
             case TRANS_TO_READY:
                 if (process->pState == CREATED || process->pState == BLOCKED)
                 {
+                    if(prevStatet == BLOCKED) {
+                        process->ioWaitTime += timeInPrevState;
+                        process->ioWaitPeriod->push_back(new int[]{prevTime, currTime});
+                    }
 //                    std::cout << "TRANS TO READY" << std::endl;
                     stateChangeLog(prevStatet, READY, timeInPrevState, process);
 
@@ -314,6 +316,7 @@ public:
             case TRANS_TO_PREEMPT:
                 if (process->pState == RUNNG)
                 {
+
                     //Need to calculate the remainning time
                     process->pState = READY;
                     process->totalTime -= timeInPrevState;
@@ -332,6 +335,7 @@ public:
             case TRANS_TO_RUN:
 //                cout << "TRANS TO RUN" << endl;
                 // scheduler->run();
+                if (prevStatet = READY) process->cpuWaitTime += timeInPrevState;
                 CURRENT_RUNNING_PROCESS = process;
                 process->pState = RUNNG;
                 //The CPU burst this time, no matter it will be preempted or not. Only take random when the current one is exhauseted
@@ -406,6 +410,7 @@ public:
                     {
                         stateChangeLog(prevStatet, DONE, timeInPrevState, process);
 //                        std::cout << "DONE: " << process->id << std::endl;
+                        process->finishTime = currTime;
                     }
                 }
                 else
@@ -418,6 +423,10 @@ public:
             default:
                 break;
             }
+
+
+
+
 
             if (CALL_SCHEDULER)
             {
@@ -455,6 +464,15 @@ public:
         accounting();
     }
 
+    bool anyProcWaitingIO() {
+        for (int i = 0; i < procs->size(); i++) {
+            if (procs->at(i)->pState == BLOCKED) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void stateChangeLog(ProcState prev, ProcState now, int timeInPrevState, Process *p, int timeNeeded = 0)
     {
 
@@ -476,17 +494,58 @@ public:
 
     void accounting() {
         std::cout << StypeToString(sType);
-        if (scheduler->isPreemptive()) std::cout << " " << quantum << std::endl;
+        if (scheduler->isPreemptive()) std::cout << " " << quantum;
+        std::cout << std::endl;
+        int macroFinishTime = currTime;
+        int macroCPUWaitTime = 0;
+        int macroIOWaitTime = 0;
+        int macroNumOfProcess = procs->size();
+        int macroTurnAroundTime = 0;
+        int macroCPUTotalTime = 0;
+        vector<int *> periods = vector<int *>();
+        Process *p;
+        for (int i = 0; i < procs->size(); i++) {
+            p = procs->at(i);
+            p->turnAroundTime = p->finishTime - p->arrivTime;
+            printf("%04d: %4d %4d %4d %4d %1d | %5d %5d %5d %5d\n",
+                   p->id, p->arrivTime, p->statisticTT, p->cpuBurst, p->ioBurst, p->prio,
+                   p->finishTime, p->turnAroundTime,p->ioWaitTime, p->cpuWaitTime);
+            macroCPUTotalTime += p->statisticTT;
+            macroCPUWaitTime += p->cpuWaitTime;
+//            macroIOWaitTime += p->ioWaitTime;
+            macroTurnAroundTime += p->turnAroundTime;
 
-//        Process *p;
-//        for (int i = 0; i < procs->size(); i++) {
-//            p = procs->at(i);
-//            int id = p->id;
-//            int totoalCPUTime = p->totalTime;//modify
-//            int totalIOTime = p->ioBurst;//modify
-//            int
-//
-//        }
+            periods.insert(periods.end(), p->ioWaitPeriod->begin(), p->ioWaitPeriod->end());
+        }
+
+        sort(periods.begin(), periods.end(),[] (int* a, int* b) -> bool {
+            if (a[0] != b[0]) return a[0] < b[0];
+            else return a[1] < b[1];
+        });
+        int startTime = periods.front()[0];
+        int endTime = periods.front()[1];
+        for (auto i: periods) {
+            if (i[0] <= endTime) {
+                endTime = max(endTime, i[1]);
+            } else {
+                macroIOWaitTime += (endTime - startTime);
+                startTime = i[0];
+                endTime = i[1];
+            }
+        }
+        macroIOWaitTime += (endTime - startTime);
+
+        double cpuUtil = 100.0 * (macroCPUTotalTime / (double) macroFinishTime);
+        double ioUtil = 100.0 * (macroIOWaitTime / (double) macroFinishTime);
+        double throughput = 100.0 * (macroNumOfProcess / (double) macroFinishTime);
+        double turnarounRatio = (macroTurnAroundTime/ (double) macroNumOfProcess);
+        double cpuWaitRaio = (macroCPUWaitTime/ (double) macroNumOfProcess);
+        printf("SUM: %d %.2lf %.2lf %.2lf %.2lf %.3lf\n",
+               macroFinishTime, // last event finish
+               cpuUtil, // percent cpu utilization
+               ioUtil, // percent io wait
+               turnarounRatio, // average turnaround
+               cpuWaitRaio, //average waiting time
+               throughput); // average something
     }
-
 };

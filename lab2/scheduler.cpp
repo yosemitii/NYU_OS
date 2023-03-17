@@ -122,6 +122,13 @@ public:
     int dynamicPrio;
     int timestamp;
     ProcState pState;
+    int statisticTT;
+    int cpuWaitTime;
+    int ioWaitTime;
+    int turnAroundTime;
+    int finishTime;
+    vector<int *> *ioWaitPeriod;
+
     Process(int id, int at, int tc, int cb, int io, int prio)
     {
         this->id = id;
@@ -133,6 +140,8 @@ public:
         this->timestamp = this->arrivTime;
         this->pState = CREATED;
         this->dynamicPrio = this->prio - 1;
+        this->statisticTT = totalTime;
+        this->ioWaitPeriod = new vector<int *>();
     }
     void show()
     {
