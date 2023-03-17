@@ -202,7 +202,7 @@ public:
     }
 
     void runQueueLog(){
-        printf("FIFO SCHED (%d):", runQueue->size());
+        printf("SCHED (%d):", runQueue->size());
         if (runQueue->size() == 0) return;
         Process *head = runQueue->front();
         std::cout << head->id << ":" << head->timestamp << " ";
@@ -255,7 +255,7 @@ public:
     }
 
     void runQueueLog(){
-        printf("LIFO SCHED (%d):", runQueue->size());
+        printf("SCHED (%d):", runQueue->size());
         if (runQueue->size() == 0) {
             std::cout << endl;
             return;
@@ -365,7 +365,7 @@ public:
     }
 
     void runQueueLog(){
-        printf("FIFO SCHED (%d):", runQueue->size());
+        printf("SCHED (%d):", runQueue->size());
         if (runQueue->size() == 0) return;
         Process *head = runQueue->front();
         std::cout << head->id << ":" << head->timestamp << " ";
@@ -414,7 +414,7 @@ public:
     };
 
     void runQueueLog(){
-        printf("RR SCHED (%d):", runQueue->size());
+        printf("SCHED (%d):", runQueue->size());
         if (runQueue->size() == 0) return;
         Process *head = runQueue->front();
         std::cout << head->id << ":" << head->timestamp << " ";
