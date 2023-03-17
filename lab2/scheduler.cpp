@@ -26,6 +26,26 @@ typedef enum SchedulerType
     PRIO,
     PREPRIO,
 } SchedulerType;
+inline const char *StypeToString(SchedulerType v)
+{
+    switch (v)
+    {
+        case FCFS:
+            return "FCFS";
+        case LCFS:
+            return "LCFS";
+        case SRTF:
+            return "SRTF";
+        case RR:
+            return "RR";
+        case PRIO:
+            return "PRIO";
+        case PREPRIO:
+            return "PREPRIO";
+        default:
+            return "UNKOWN";
+    }
+}
 #ifndef RAND_GENERATOR
 #define RAND_GENERATOR
 /*Class Definition*/
@@ -434,6 +454,7 @@ public:
     }
     virtual void addProcess(Process *p) {
 //        std::deque<Process *>* d = activeQ->at(1);
+        if (p->pState == BLOCKED) p->dynamicPrio = p->prio-1;
         p->pState = READY;
         if (p->dynamicPrio < 0) {
             p->dynamicPrio = p->prio-1;

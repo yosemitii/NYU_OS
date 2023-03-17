@@ -273,7 +273,6 @@ public:
     void simulation()
     {
         std::cout << "\n========Simulatio start:========" << endl;
-
         while (eventQ->size != 0)
         {
 //            eventQ->display();
@@ -452,6 +451,8 @@ public:
                 }
             }
         }
+
+        accounting();
     }
 
     void stateChangeLog(ProcState prev, ProcState now, int timeInPrevState, Process *p, int timeNeeded = 0)
@@ -472,4 +473,20 @@ public:
         }
         printf("\n");
     }
+
+    void accounting() {
+        std::cout << StypeToString(sType);
+        if (scheduler->isPreemptive()) std::cout << " " << quantum << std::endl;
+
+//        Process *p;
+//        for (int i = 0; i < procs->size(); i++) {
+//            p = procs->at(i);
+//            int id = p->id;
+//            int totoalCPUTime = p->totalTime;//modify
+//            int totalIOTime = p->ioBurst;//modify
+//            int
+//
+//        }
+    }
+
 };
