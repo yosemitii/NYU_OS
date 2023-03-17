@@ -290,8 +290,8 @@ public:
             scheduler->timestamp = currTime;
             process->timestamp = currTime;
 
-//            if (currTime >= 2159) {
-//                cout << "2159" << endl;
+//            if (currTime >= 491) {
+//                cout << "stop" << endl;
 //            }
 //            int preemptTime;
             switch (transition)
@@ -429,7 +429,10 @@ public:
 
 //                scheduler->runQueueLog();
                 if (eventQ->getNextEventTime() == currTime){
-                    if (sType == PREPRIO && prevState == BLOCKED && process->pState == READY
+                    if (sType == PREPRIO
+                    && prevState == BLOCKED
+                    && process->pState == READY
+                    && CURRENT_RUNNING_PROCESS != nullptr
                     && !stopAt(CURRENT_RUNNING_PROCESS->id, currTime)
                     && eventQ->peek()->procID != process->id
                     && eventQ->peek()->procID != CURRENT_RUNNING_PROCESS->id
@@ -440,7 +443,6 @@ public:
                             eventQ->put(newEvent, eflag);
                             CALL_SCHEDULER = false;
                             PREPRIO_PREEMT_FINISHED = true;
-
                         }
                     } else {
                         continue;
@@ -481,6 +483,7 @@ public:
     }
 
     bool stopAt(int procID, int time) {
+        if (CURRENT_RUNNING_PROCESS == nullptr) return false;
         vector<Event *> *eventAtTime = eventQ->getAllEventByTime(time);
         if (eventAtTime->size() == 0) return false;
         for (auto e: *eventAtTime) {
