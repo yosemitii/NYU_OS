@@ -109,7 +109,7 @@ public:
                 break;
             case 'R':
                 sType = RR;
-                if (sscanf(argv[optind], "-sP%d:%d", &quantum, &maxprio) == -1)
+                if (sscanf(argv[optind], "-sR%d:%d", &quantum, &maxprio) == -1)
                 {
                     if (sscanf(argv[optind], "-sP%d", &quantum) == -1)
                     {
@@ -315,8 +315,12 @@ public:
             case TRANS_TO_PREEMPT:
                 if (process->pState == RUNNG)
                 {
+                    //Need to calculate the remainning time
                     process->pState = READY;
+                    process->totalTime -= timeInPrevState;
+                    process->cpuBurstRemain -= timeInPrevState;
                     stateChangeLog(prevStatet, READY, timeInPrevState, process);
+
                     process->dynamicPrio -= 1;
                     scheduler->addProcess(process);
                     CURRENT_RUNNING_PROCESS = nullptr;
@@ -331,22 +335,52 @@ public:
                 // scheduler->run();
                 CURRENT_RUNNING_PROCESS = process;
                 process->pState = RUNNG;
-                nextTimeStamp = rgen->myrandom(process->cpuBurst);
-                nextTimeStamp = std::min(nextTimeStamp, process->totalTime);
-                if (scheduler->isPreemptive()) {
-                    preemptTime = quantum - (currTime % quantum);
-                    if (preemptTime < nextTimeStamp) {
-                        newEvent = new Event(currTime + preemptTime,
-                                             process->id, TRANS_TO_PREEMPT, process);
-                        stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, preemptTime);
-                    } else {
-                        newEvent = new Event(currTime + nextTimeStamp,
-                                             process->id, TRANS_TO_BLOCK, process);
-                        stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp);
-                    }
-                    eventQ->put(newEvent);
-                } else {
+                //The CPU burst this time, no matter it will be preempted or not. Only take random when the current one is exhauseted
+//                    nextTimeStamp = rgen->myrandom(process->cpuBurst);
+//                    nextTimeStamp = std::min(nextTimeStamp, process->totalTime);
 
+
+                if (scheduler->isPreemptive()) {
+                    //The case that the cpu burst is NOT exhausted
+                    //Do not generate new burst
+                    //Two sub-cases: 1. remainBurst > quantum: PREEMT
+                    //               2. remainBurst <= quantum: BLOCK
+                    if (process->cpuBurstRemain > 0) {
+                        if (quantum < process->cpuBurstRemain) {
+//                            process->cpuBurstRemain = nextTimeStamp;
+                            newEvent = new Event(currTime + quantum,
+                                                 process->id, TRANS_TO_PREEMPT, process);
+                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, quantum);
+                        } else {
+                            newEvent = new Event(currTime + process->cpuBurstRemain,
+                                                 process->id, TRANS_TO_BLOCK, process);
+                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, process->cpuBurstRemain);
+                        }
+                        eventQ->put(newEvent);
+                    }
+                    //The case that the cpu burst is exhausted
+                    //Two sub-cases: 1. burst > quantum: PREEMT
+                    //               2. burst <= quantum: BLOCK
+                    else {
+                        nextTimeStamp = rgen->myrandom(process->cpuBurst);
+                        nextTimeStamp = std::min(nextTimeStamp, process->totalTime);
+                        process->cpuBurstRemain = nextTimeStamp;
+                        if (quantum < nextTimeStamp) {
+                            newEvent = new Event(currTime + quantum,
+                                                 process->id, TRANS_TO_PREEMPT, process);
+                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, quantum);
+                        } else {
+                            newEvent = new Event(currTime + nextTimeStamp,
+                                                 process->id, TRANS_TO_BLOCK, process);
+                            stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp);
+                        }
+                        eventQ->put(newEvent);
+                    }
+
+                } //The case of Non-preemptive.
+                else {
+                    nextTimeStamp = rgen->myrandom(process->cpuBurst);
+                    nextTimeStamp = std::min(nextTimeStamp, process->totalTime);
                     newEvent = new Event(currTime + nextTimeStamp,
                                          process->id, TRANS_TO_BLOCK, process);
                     stateChangeLog(prevStatet, RUNNG, timeInPrevState, process, nextTimeStamp);
@@ -358,6 +392,7 @@ public:
                 if (process->pState == RUNNG)
                 {
                     process->totalTime -= timeInPrevState;
+                    process->cpuBurstRemain -= timeInPrevState;
                     process->pState = BLOCKED;
                     CURRENT_RUNNING_PROCESS = nullptr;
                     if (process->totalTime > 0)
@@ -414,11 +449,14 @@ public:
         printf("%d %d %d: %s->%s\t", p->timestamp, p->id, timeInPrevState, ProcToString(prev), ProcToString(now));
         if (prev == READY && now == RUNNG)
         {
-            printf("cb=%d rem=%d prio=%d", timeNeeded, p->totalTime, p->prio);
+            printf("cb=%d rem=%d prio=%d",  p->cpuBurstRemain, p->totalTime, p->prio);
         }
         else if (prev == RUNNG && now == BLOCKED)
         {
             printf("ib=%d rem=%d prio=%d", timeNeeded, p->totalTime, p->prio);
+        } else if (prev == RUNNG && now == READY)
+        {
+            printf("cb=%d rem=%d prio=%d", p->cpuBurstRemain, p->totalTime, p->prio);
         }
         printf("\n");
     }

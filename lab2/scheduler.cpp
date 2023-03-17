@@ -361,24 +361,48 @@ public:
 class RR : public Scheduler
 {
 private:
-    std::queue<Process *> *runQueue;
+    std::deque<Process *> *runQueue;
     int quantum;
 
 public:
     RR(int q) {
         quantum = q;
+        runQueue = new std::deque<Process *>();
     }
     virtual void addProcess(Process *p) {
-        runQueue->push(p);
+        p->dynamicPrio = p->prio-1;
+        runQueue->push_back(p);
     };
     virtual Process *getNextProcess() {
-        Process *p = runQueue->front();
-        runQueue->pop();
+        runQueueLog();
+        Process *p = nullptr;
+        if (!runQueue->empty())
+        {
+            p = runQueue->front();
+            runQueue->pop_front();
+        }
         return p;
     };
     virtual bool isPreemptive() {
         return true;
     };
+
+    void runQueueLog(){
+        printf("FIFO SCHED (%d):", runQueue->size());
+        if (runQueue->size() == 0) return;
+        Process *head = runQueue->front();
+        std::cout << head->id << ":" << head->timestamp << " ";
+        runQueue->pop_front();
+        runQueue->push_back(head);
+        Process *curr = runQueue->front();
+        while (curr != head) {
+            std::cout << curr->id << ":" << curr->timestamp << " ";
+            runQueue->pop_front();
+            runQueue->push_back(curr);
+            curr = runQueue->front();
+        }
+        std::cout << std::endl;
+    }
 };
 
 class PRIO : public Scheduler
