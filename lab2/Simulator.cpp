@@ -233,7 +233,7 @@ public:
                 index++;
             }
 
-            int prio = rgen->myrandom(maxprio) - 1;
+            int prio = rgen->myrandom(maxprio);
             Process *process = new Process(id, info[0], info[1], info[2], info[3], prio);
             procs->push_back(process);
             Event *newevent = new Event(info[0], id, TRANS_TO_READY, process);
@@ -340,7 +340,7 @@ public:
 //                    nextTimeStamp = std::min(nextTimeStamp, process->totalTime);
 
 
-                if (scheduler->isPreemptive()) {
+                if (scheduler->isPreemptive()>0) {
                     //The case that the cpu burst is NOT exhausted
                     //Do not generate new burst
                     //Two sub-cases: 1. remainBurst > quantum: PREEMT
@@ -405,8 +405,8 @@ public:
                     }
                     else
                     {
-                        stateChangeLog(prevStatet, BLOCKED, timeInPrevState, process);
-                        std::cout << "DONE: " << process->id << std::endl;
+                        stateChangeLog(prevStatet, DONE, timeInPrevState, process);
+//                        std::cout << "DONE: " << process->id << std::endl;
                     }
                 }
                 else
@@ -446,17 +446,19 @@ public:
 
     void stateChangeLog(ProcState prev, ProcState now, int timeInPrevState, Process *p, int timeNeeded = 0)
     {
+
         printf("%d %d %d: %s->%s\t", p->timestamp, p->id, timeInPrevState, ProcToString(prev), ProcToString(now));
+        if (now == DONE) return;
         if (prev == READY && now == RUNNG)
         {
-            printf("cb=%d rem=%d prio=%d",  p->cpuBurstRemain, p->totalTime, p->prio);
+            printf("cb=%d rem=%d prio=%d",  p->cpuBurstRemain, p->totalTime, p->dynamicPrio);
         }
         else if (prev == RUNNG && now == BLOCKED)
         {
             printf("ib=%d rem=%d prio=%d", timeNeeded, p->totalTime, p->prio);
         } else if (prev == RUNNG && now == READY)
         {
-            printf("cb=%d rem=%d prio=%d", p->cpuBurstRemain, p->totalTime, p->prio);
+            printf("cb=%d rem=%d prio=%d", p->cpuBurstRemain, p->totalTime, p->dynamicPrio);
         }
         printf("\n");
     }

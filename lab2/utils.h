@@ -53,7 +53,8 @@ typedef enum ProcState
     RUNNG,
     READY,
     BLOCKED,
-    CREATED
+    CREATED,
+    DONE
 } ProcState;
 
 inline const char *ProcToString(ProcState v)
@@ -68,8 +69,10 @@ inline const char *ProcToString(ProcState v)
         return "BLOCK";
     case CREATED:
         return "CREATED";
+    case DONE:
+        return "DONE";
     default:
-        return "UNKOWN";
+        return "UNKNOWN";
     }
 }
 #endif

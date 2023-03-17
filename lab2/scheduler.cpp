@@ -140,7 +140,7 @@ public:
     }
     virtual void addProcess(Process *p) = 0;
     virtual Process *getNextProcess() = 0;
-    virtual bool isPreemptive() = 0;
+    virtual int isPreemptive() = 0;
     virtual void runQueueLog(){};
     // virtual void runQueue() = 0;
 };
@@ -157,6 +157,7 @@ public:
     
     virtual void addProcess(Process *p)
     {
+        p->dynamicPrio = p->prio - 1;
         runQueue->push_back(p);
     };
 
@@ -174,9 +175,9 @@ public:
         return p;
     }
 
-    bool isPreemptive()
+    int isPreemptive()
     {
-        return false;
+        return 0;
     }
 
     void runQueueLog(){
@@ -211,6 +212,7 @@ public:
 
     virtual void addProcess(Process *p)
     {
+        p->dynamicPrio = p->prio - 1;
         runQueue->push_front(p);
     };
 
@@ -226,13 +228,13 @@ public:
         return p;
     }
 
-    bool isPreemptive()
+    int isPreemptive()
     {
-        return false;
+        return 0;
     }
 
     void runQueueLog(){
-        printf("LIFO SCHED (%d):", runQueue->size());
+        printf("SCHED (%d):", runQueue->size());
         if (runQueue->size() == 0) {
             std::cout << endl;
             return;
@@ -265,6 +267,7 @@ public:
 
     void addProcess(Process *p)
     {
+        p->dynamicPrio = p->prio - 1;
         runQueue->push_back(p);
         sortQueue();
     };
@@ -281,9 +284,9 @@ public:
         return p;
     }
 
-    bool isPreemptive()
+    int isPreemptive()
     {
-        return false;
+        return 0;
     }
 
     int minIndex(int sortedIndex)
@@ -383,8 +386,8 @@ public:
         }
         return p;
     };
-    virtual bool isPreemptive() {
-        return true;
+    virtual int isPreemptive() {
+        return 1;
     };
 
     void runQueueLog(){
@@ -408,10 +411,10 @@ public:
 class PRIO : public Scheduler
 {
 private:
-    std::vector<std::deque<Process *>*>* activeQ;
-    std::vector<std::deque<Process *>*>* expiredQ;
-//    std::deque<Process *>* activeQ;
-//    std::deque<Process *>* expiredQ;
+//    std::vector<std::deque<Process *>*>* activeQ;
+//    std::vector<std::deque<Process *>*>* expiredQ;
+    std::vector<std::deque<Process *> >* activeQ;
+    std::vector<std::deque<Process *> >* expiredQ;
     int quantum;
     int maxprio;
 
@@ -419,37 +422,53 @@ public:
     PRIO(int q, int mp) : Scheduler(){
         this->quantum = q;
         this->maxprio = mp;
-        this->activeQ = new std::vector<std::deque<Process *>*>[maxprio];
-        this->expiredQ = new std::vector<std::deque<Process *>*>[maxprio];
-        for (int i = 0; i < maxprio-1; i++) {
-            activeQ->at(i) = new std::deque<Process *>();
-            expiredQ->at(i) = new std::deque<Process *>();
+        this->activeQ =  new vector<deque<Process *> >();
+        this->expiredQ =  new vector<deque<Process *> >();
+        for (int i = 0; i < maxprio; i++) {
+            activeQ->push_back(std::deque<Process *>());
+            expiredQ->push_back(std::deque<Process *>());
         }
     }
     virtual void addProcess(Process *p) {
 //        std::deque<Process *>* d = activeQ->at(1);
-        activeQ->at(p->dynamicPrio)->push_back(p);
+
+        if (p->dynamicPrio < 0) {
+            p->dynamicPrio = p->prio-1;
+            expiredQ->at(p->dynamicPrio).push_back(p);
+        } else {
+            activeQ->at(p->dynamicPrio).push_back(p);
+        }
+
     };
+
     virtual Process *getNextProcess() {
         runQueueLog();
         Process *res = nullptr;
         for (int i = maxprio - 1; i >=0; i--) {
-            if (activeQ->at(i)->empty()) continue;
-            res = activeQ->at(i)->front();
-            activeQ->at(i)->pop_front();
+            if (activeQ->at(i).empty()) continue;
+            res = activeQ->at(i).front();
+            activeQ->at(i).pop_front();
             return res;
         }
         if (res == nullptr) {
             std::cout << "switch queue" << std::endl;
             switchQ();
         }
+        for (int i = maxprio - 1; i >=0; i--) {
+            if (activeQ->at(i).empty()) continue;
+            res = activeQ->at(i).front();
+            activeQ->at(i).pop_front();
+            return res;
+        }
+        return res;
     };
-    virtual bool isPreemptive() {
-        return true;
+
+    virtual int isPreemptive() {
+        return 1;
     };
 
     void switchQ() {
-        std::vector<std::deque<Process *>*>* temp = activeQ;
+        vector<std::deque<Process *> >* temp = activeQ;
         activeQ = expiredQ;
         expiredQ = temp;
     };
@@ -458,19 +477,21 @@ public:
         std::cout << traverseQ(activeQ) << " | " << traverseQ(expiredQ) << endl;
     }
 
-    std::string traverseQ(std::vector<std::deque<Process *>*>* q) {
+    std::string traverseQ(vector<std::deque<Process *> > *q) {
         ostringstream os;
         os << "{";
         for (int i = q->size() - 1; i >=0; i--) {
             os << "[";
             Process * p;
-            for (int j = 0; j < q->at(j)->size(); j++) {
-                p = q->at(j)->front();
+            for (int j = 0; j < q->at(i).size(); j++) {
+//                if (q->at(j).empty()) continue;
+                //front will return nullptr
+                p = q->at(i).front();
                 os << p->id;
-                q->at(j)->pop_front();
-                q->at(j)->push_back(p);
+                q->at(i).pop_front();
+                q->at(i).push_back(p);
             }
-            os << "[";
+            os << "]";
         }
         os << "}";
         return os.str();
@@ -478,25 +499,90 @@ public:
 
 };
 
-class PREPRIO : public PRIO
+class PREPRIO : public Scheduler
 {
 private:
-    std::queue<Process *> *runQueue;
+    std::vector<std::deque<Process *> >* activeQ;
+    std::vector<std::deque<Process *> >* expiredQ;
     int quantum;
     int maxprio;
 
 public:
-    PREPRIO(int q, int mp) : PRIO(q, mp){}
+    PREPRIO(int q, int mp) : Scheduler(){
+        this->quantum = q;
+        this->maxprio = mp;
+        this->activeQ =  new vector<deque<Process *> >();
+        this->expiredQ =  new vector<deque<Process *> >();
+        for (int i = 0; i < maxprio; i++) {
+            activeQ->push_back(std::deque<Process *>());
+            expiredQ->push_back(std::deque<Process *>());
+        }
+    }
     virtual void addProcess(Process *p) {
-//        runQueue->push(p);
+
+        if (p->dynamicPrio < 0) {
+            p->dynamicPrio = p->prio-1;
+            expiredQ->at(p->dynamicPrio).push_back(p);
+        } else {
+            activeQ->at(p->dynamicPrio).push_back(p);
+        }
+
     };
+
     virtual Process *getNextProcess() {
-//        Process *p = runQueue->front();
-//        runQueue->pop();
-//        return p;
+        runQueueLog();
+        Process *res = nullptr;
+        for (int i = maxprio - 1; i >=0; i--) {
+            if (activeQ->at(i).empty()) continue;
+            res = activeQ->at(i).front();
+            activeQ->at(i).pop_front();
+            return res;
+        }
+        if (res == nullptr) {
+            std::cout << "switch queue" << std::endl;
+            switchQ();
+        }
+        for (int i = maxprio - 1; i >=0; i--) {
+            if (activeQ->at(i).empty()) continue;
+            res = activeQ->at(i).front();
+            activeQ->at(i).pop_front();
+            return res;
+        }
+        return res;
     };
-    virtual bool isPreemptive() {
-        return true;
+
+    virtual int isPreemptive() {
+        return 2;
+    };
+
+    void switchQ() {
+        vector<std::deque<Process *> >* temp = activeQ;
+        activeQ = expiredQ;
+        expiredQ = temp;
+    };
+
+    void runQueueLog() {
+        std::cout << traverseQ(activeQ) << " | " << traverseQ(expiredQ) << endl;
+    }
+
+    std::string traverseQ(vector<std::deque<Process *> > *q) {
+        ostringstream os;
+        os << "{";
+        for (int i = q->size() - 1; i >=0; i--) {
+            os << "[";
+            Process * p;
+            for (int j = 0; j < q->at(i).size(); j++) {
+//                if (q->at(j).empty()) continue;
+                //front will return nullptr
+                p = q->at(i).front();
+                os << p->id;
+                q->at(i).pop_front();
+                q->at(i).push_back(p);
+            }
+            os << "]";
+        }
+        os << "}";
+        return os.str();
     };
 };
 #endif
