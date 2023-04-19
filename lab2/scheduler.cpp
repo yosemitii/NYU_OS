@@ -183,7 +183,7 @@ public:
     FIFO() : Scheduler(){
         runQueue = new std::deque<Process*>();
     };
-    
+
     virtual void addProcess(Process *p)
     {
         p->pState = READY;
