@@ -14,6 +14,18 @@ using namespace std;
 
 #define MAX_FRAMES 128
 #define MAX_VPAGES 64
+#define COST_MAPS 350
+#define COST_UNMAPS 410
+#define COST_INS 3200
+#define COST_OUTS 2750
+#define COST_FINS 2350
+#define COST_FOUTS 2800
+#define COST_ZEROS 150
+#define COST_SEGV 440
+#define COST_SEGPROT 410
+#define COST_RW 1
+#define COST_CONTEXT_SWITCH 130
+#define COST_EXIT 1230
 
 
 typedef struct {
@@ -41,18 +53,6 @@ typedef struct {
     int INDEX = -1;
 } frame_t;
 
-
-//typedef enum PagerType
-//{
-//    FCFS,
-//    RANDOM,
-//    CLOCK,
-//    NRU,
-//    AGING,
-//    WORKING_SET,
-//} PagerType;
-
-
 //pte_t page_table[MAX_VPAGES];
 frame_t frame_table[MAX_FRAMES];
 int victim_frame_index = -1;
@@ -79,27 +79,82 @@ public:
     }
 };
 
+class RandomPager: public Pager {
+    int num_frames;
+//    int size;
+    int victim_index;
+    RandGenerator *randGenerator;
+public:
+    RandomPager(int num_frames, std::string rfile_name) {
+//        this->size = 0;
+//        this->frames = deque<frame_t*> (num_frames);l
+        this->num_frames = num_frames;
+        this->victim_index = -1;
+        this->randGenerator = new RandGenerator(rfile_name);
+    }
+
+    frame_t* select_victim_frame() override {
+        victim_index = randGenerator->myrandom(num_frames);
+        return &frame_table[victim_index];
+    }
+
+};
+
+class ClockPager: public Pager {
+    int num_frames;
+//    int size;
+    int victim_index;
+    RandGenerator *randGenerator;
+public:
+    ClockPager(int num_frames) {
+        this->num_frames = num_frames;
+        this->victim_index = -1;
+    }
+
+    frame_t* select_victim_frame() override {
+        victim_index = randGenerator->myrandom(num_frames);
+        return &frame_table[victim_index];
+    }
+
+};
+
 class Process {
 public:
+    typedef struct {
+        unsigned long unmaps = 0;
+        unsigned long maps = 0;
+        unsigned long ins = 0;
+        unsigned long outs = 0;
+        unsigned long fins = 0;
+        unsigned long fouts = 0;
+        unsigned long zeros = 0;
+        unsigned long segv = 0;
+        unsigned long segprot = 0;
+    } proc_stats;
+
     int id;
     pte_t page_table[MAX_VPAGES];
+    proc_stats pstats;
 
     Process(int id) {
         this->id = id;
-        page_table[MAX_VPAGES] = {0};
+        this->page_table[MAX_VPAGES] = {0};
+        this->pstats;
     }
 
-    void display_pte() {
-        for (int i = 0; i < 64; i++) {
-            printf("PTE:%d, PRESENT:%d REFERENCED:%d MODIFIED:%d WRITE_PROTECT:%d PAGEDOUT:%d, NOT_HOLE:%d, FRAME_NUMBER:%d\n", i,
-                   page_table[i].PRESENT, page_table[i].REFERENCED, page_table[i].MODIFIED, page_table[i].WRITE_PROTECT,
-                   page_table[i].PAGEDOUT, page_table[i].NOT_HOLE, page_table[i].FRAME_NUMBER);
-        }
-    }
+
+
+//    void display_pte() {
+//        for (int i = 0; i < 64; i++) {
+//            printf("PTE:%d, PRESENT:%d REFERENCED:%d MODIFIED:%d WRITE_PROTECT:%d PAGEDOUT:%d, NOT_HOLE:%d, FRAME_NUMBER:%d\n", i,
+//                   page_table[i].PRESENT, page_table[i].REFERENCED, page_table[i].MODIFIED, page_table[i].WRITE_PROTECT,
+//                   page_table[i].PAGEDOUT, page_table[i].NOT_HOLE, page_table[i].FRAME_NUMBER);
+//        }
+//    }
 
     void display_pagetable() {
         printf("PT[%d]:", id);
-        for (int i = 0; i < 64; i++) {
+        for (int i = 0; i < MAX_VPAGES; i++) {
             pte_t pte = page_table[i];
             if (!pte.PRESENT) {
 //                printf("%d", pte.PAGEDOUT);
@@ -118,6 +173,14 @@ public:
         }
         printf("\n");
     }
+
+    void diplay_stats() {
+        printf("PROC[%d]: U=%lu M=%lu I=%lu O=%lu FI=%lu FO=%lu Z=%lu SV=%lu SP=%lu\n", id,
+               pstats.unmaps, pstats.maps, pstats.ins, pstats.outs,
+               pstats.fins, pstats.fouts, pstats.zeros,
+               pstats.segv, pstats.segprot);
+    }
+
 };
 
 class Simulator {
@@ -129,22 +192,36 @@ public:
     vector<Process *> *processes;
     ifstream inFile;
     ifstream rFile;
-    Pager *THE_PAGER;
+    Pager *pager;
     bool Oflag;
     bool Pflag;
     bool Fflag;
+    bool Sflag;
+    bool xflag;
+    bool yflag;
+    bool aflag;
+    bool fflag;
 //    frame_t *frame_table;
-    Simulator(char pager_type, int num_frames, std::string infile_name, std::string rfile_name)
+    Simulator(int num_frames)
     {
-        this->THE_PAGER = new FIFOPager(num_frames);
+
+        this->pager = new FIFOPager(num_frames);
         this->num_frames = num_frames;
-        this->infile_name = infile_name;
-        this->rfile_name = rfile_name;
         this->processes = new vector<Process *>;
 //        this->frame_table = new frame_t[num_frames];
     }
 
-    void init() {
+    void init(char pager_type, std::string infile_name, std::string rfile_name) {
+//        this->infile_name = infile_name;
+//        this->rfile_name = rfile_name;
+        switch (pager_type)
+        {
+            case 'r':
+                this->pager = new RandomPager(num_frames, rfile_name);
+                break;
+            default:
+                break;
+        }
         inFile.open(infile_name);
         std::string line;
         int readType = 0;
@@ -257,21 +334,26 @@ public:
 
     frame_t *get_frame() {
         frame_t *frame = allocate_frame_from_free_list();
-        if (frame == NULL) frame = THE_PAGER->select_victim_frame();
+        if (frame == NULL) frame = pager->select_victim_frame();
         return frame;
     }
 
     void simulation() {
         char operation;
         int vpage;
-        Process *current_process;
+        Process *current_process = nullptr;
         int instruct_cnt = 0;
+        int ctx_switches = 0, process_exits= 0;
+        unsigned long long cost = 0;
         int frame_index = -1;
         while (get_next_instruction(operation, vpage)) {
             // handle special case of “c” and “e” instruction
             printf("%d: ==> %c %d\n", instruct_cnt, operation, vpage);
             if (operation == 'c') {
+//                Process *old_process = current_process;
                 current_process = processes->at(vpage);
+//                if (current_process->id != old_process->id) ctx_switches++;
+                ctx_switches++;
                 instruct_cnt++;
                 continue;
             } else if (operation == 'e') {
@@ -283,9 +365,11 @@ public:
                     if (del_pte->PRESENT) {
                         free_list.push_back(del_pte->FRAME_NUMBER);
                         exit_unmap(&frame_table[del_pte->FRAME_NUMBER]);
+                        current_process->pstats.unmaps++;
                         if (del_pte->MODIFIED) {
                             if (del_pte->FILE_MAPPED) {
                                 printf(" FOUT\n");
+                                current_process->pstats.fouts++;
                             }
 //                            } else {
 //                                printf(" OUT\n");
@@ -295,55 +379,64 @@ public:
                     del_pte->reset();
                     del_pte->PAGEDOUT = 0;
                 }
-                current_process = nullptr;
+//                current_process = nullptr;
                 instruct_cnt++;
+                process_exits++;
                 continue;
             }
             // now the real instructions for read and write
-
-            pte_t *pte = &current_process->page_table[vpage];
-            if (!pte->NOT_HOLE) {
-                printf(" SEGV\n");
-                instruct_cnt++;
-                continue;
-            }
-            if (!pte->PRESENT) {
-                // this in reality generates the page fault exception and now you execute
-                // verify this is actually a valid page in a vma if not raise error and next inst
-                frame_t *newframe = get_frame();
+            else {
+                pte_t *pte = &current_process->page_table[vpage];
+                cost += COST_RW;
+                if (!pte->NOT_HOLE) {
+                    printf(" SEGV\n");
+                    instruct_cnt++;
+                    current_process->pstats.segv++;
+                    continue;
+                }
+                if (!pte->PRESENT) {
+                    // this in reality generates the page fault exception and now you execute
+                    // verify this is actually a valid page in a vma if not raise error and next inst
+                    frame_t *newframe = get_frame();
 //                frame_t *newframe = get_frame();
-                //-> figure out if/what to do with old frame if it was mapped
-                int pid = newframe->PROCESS_ID;
-                int vpn = newframe->VPAGE;
-                //Swap out
-                if (pid != -1 || vpn != -1) {
-                    printf(" UNMAP %d:%d\n", pid, vpn);
-                    Process *victim = processes->at(pid);
-                    if (victim->page_table[vpn].MODIFIED) {
-                        victim->page_table[vpn].PAGEDOUT = 1;
-                        if (victim->page_table[vpn].FILE_MAPPED) {
-                            printf(" FOUT\n");
+                    //-> figure out if/what to do with old frame if it was mapped
+                    int pid = newframe->PROCESS_ID;
+                    int vpn = newframe->VPAGE;
+                    //Swap out
+                    if (pid != -1 || vpn != -1) {
+                        printf(" UNMAP %d:%d\n", pid, vpn);
+                        Process *victim = processes->at(pid);
+                        victim->pstats.unmaps++;
+                        if (victim->page_table[vpn].MODIFIED) {
+                            victim->page_table[vpn].PAGEDOUT = 1;
+                            if (victim->page_table[vpn].FILE_MAPPED) {
+                                printf(" FOUT\n");
+                                victim->pstats.fouts++;
+                            } else {
+                                printf(" OUT\n");
+                                victim->pstats.outs++;
+                            }
+                        }
+                        victim->page_table[vpn].reset();
+//                    processes->at(pid)->page_table[vpn].PRESENT = 0;
+                        victim->page_table[vpn].PRESENT = 0;
+                    }
+                    newframe->PROCESS_ID = current_process->id;
+                    newframe->VPAGE = vpage;
+                    // see general outline in MM-slides under Lab3 header and writeup below
+                    // see whether and how to bring in the content of the access page.
+                    if (pte->FILE_MAPPED) {
+                        printf(" FIN\n");
+                        current_process->pstats.fins++;
+                    } else {
+                        if (pte->PAGEDOUT) {
+                            printf(" IN\n");
+                            current_process->pstats.ins++;
                         } else {
-                            printf(" OUT\n");
+                            printf(" ZERO\n");
+                            current_process->pstats.zeros++;
                         }
                     }
-                    victim->page_table[vpn].reset();
-//                    processes->at(pid)->page_table[vpn].PRESENT = 0;
-                    victim->page_table[vpn].PRESENT = 0;
-                }
-                newframe->PROCESS_ID = current_process->id;
-                newframe->VPAGE = vpage;
-                // see general outline in MM-slides under Lab3 header and writeup below
-                // see whether and how to bring in the content of the access page.
-                if (pte->FILE_MAPPED) {
-                    printf(" FIN\n");
-                } else {
-                    if (pte->PAGEDOUT) {
-                        printf(" IN\n");
-                    } else {
-                        printf(" ZERO\n");
-                    }
-                }
 //                if (!pte->PAGEDOUT && !pte->FILE_MAPPED) {
 //                    printf(" ZERO\n");
 //                } else if (pte->FILE_MAPPED) {
@@ -351,27 +444,30 @@ public:
 //                } else if (pte->PAGEDOUT) {
 //                    printf(" IN\n");
 //                }
-                pte->FRAME_NUMBER = newframe->INDEX;
-                pte->PRESENT = 1;
-                printf(" MAP %d\n", newframe->INDEX);
-            }
+                    pte->FRAME_NUMBER = newframe->INDEX;
+                    pte->PRESENT = 1;
+                    printf(" MAP %d\n", newframe->INDEX);
+                    current_process->pstats.maps++;
+                }
 //            } else {
 //                instruct_cnt++;
 //                continue;
 //            }
-            // now the page is definitely present // check write protection
-            if (operation == 'w') {
-                if (pte->WRITE_PROTECT) {
-                    printf(" SEGPROT\n");
-                } else {
-                    pte->MODIFIED = 1;
+                // now the page is definitely present // check write protection
+                if (operation == 'w') {
+                    if (pte->WRITE_PROTECT) {
+                        printf(" SEGPROT\n");
+                        current_process->pstats.segprot++;
+                    } else {
+                        pte->MODIFIED = 1;
+                    }
                 }
-            }
-            pte->REFERENCED = 1;
+                pte->REFERENCED = 1;
 
-            // simulate instruction execution by hardware by updating the R/M PTE bits
+                // simulate instruction execution by hardware by updating the R/M PTE bits
 //            update_pte(read/modify) bits based on operations.
-            instruct_cnt++;
+                instruct_cnt++;
+            }
         }
 
         if (Pflag) {
@@ -388,9 +484,27 @@ public:
                     printf(" %d:%d", frame_table[i].PROCESS_ID, frame_table[i].VPAGE);
                 }
             }
+            printf("\n");
         }
 
-
+        if (Sflag) {
+            for (auto p: *processes) {
+                p->diplay_stats();
+                cost += COST_UNMAPS * p->pstats.unmaps;
+                cost += COST_MAPS * p->pstats.maps;
+                cost += COST_INS * p->pstats.ins;
+                cost += COST_OUTS * p->pstats.outs;
+                cost += COST_FINS * p->pstats.fins;
+                cost += COST_FOUTS * p->pstats.fouts;
+                cost += COST_ZEROS * p->pstats.zeros;
+                cost += COST_SEGV * p->pstats.segv;
+                cost += COST_SEGPROT * p->pstats.segprot;
+            }
+            cost += COST_CONTEXT_SWITCH * ctx_switches;
+            cost += COST_EXIT * process_exits;
+            printf("TOTALCOST %lu %lu %lu %llu %lu\n",
+                   instruct_cnt, ctx_switches, process_exits, cost, sizeof(pte_t));
+        }
     }
 
     void exit_unmap(frame_t* frameEntry) {
@@ -459,9 +573,11 @@ int main (int argc, char** argv) {
         }
     }
 
-    Simulator* s = new Simulator(pager_type, num_frames, infile_name, rfile_name);
-    s->init();
+    Simulator* s = new Simulator(num_frames);
+    s->init(pager_type, infile_name, rfile_name);
+    s->Oflag = true;
     s->Pflag = true;
     s->Fflag = true;
+    s->Sflag = true;
     s->simulation();
 }

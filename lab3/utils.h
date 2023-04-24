@@ -13,13 +13,17 @@ private:
     int *randvals;
     int ofs;
     int size;
+    std::string rfile_name;
 
 public:
-    RandGenerator() {}
-    void init(std::string filename)
+    RandGenerator(std::string rname) {
+        this->rfile_name = rname;
+        init();
+    }
+    void init()
     {
         std::ifstream rFile;
-        rFile.open(filename);
+        rFile.open(rfile_name);
         std::string line;
         size = 0;
         std::vector<int> numVec;
@@ -30,7 +34,7 @@ public:
         }
         catch (std::exception &err)
         {
-            std::cout << "ERROR: Open file error:" << filename << " Line: " << line << std::endl;
+            std::cout << "ERROR: Open file error:" << rfile_name << " Line: " << line << std::endl;
             exit(1);
         }
         randvals = new int[size];
