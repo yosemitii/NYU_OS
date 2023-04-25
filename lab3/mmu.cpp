@@ -129,7 +129,7 @@ class Pager {
 public:
     virtual frame_t* select_victim_frame(int instruct_cnt) = 0; // virtual base class
 //
-//    virtual void update_pager(int frame_id);
+    virtual void map_update(int frame_id) = 0;
 };
 
 class FIFOPager: public Pager {
@@ -148,6 +148,8 @@ public:
         return &frame_table[hand];
 //        return frames[hand];
     }
+
+    virtual void map_update(int frame_id) {return;};
 };
 
 class RandomPager: public Pager {
@@ -168,6 +170,7 @@ public:
         return &frame_table[hand];
     }
 
+    virtual void map_update(int frame_id) {return;};
 };
 
 class ClockPager: public Pager {
@@ -195,6 +198,8 @@ public:
         }
         return &frame_table[hand];
     }
+
+    virtual void map_update(int frame_id) {return;};
 
 };
 
@@ -276,21 +281,23 @@ public:
             return class_3;
         }
     }
+
+    virtual void map_update(int frame_id) {return;};
 };
 
 class AgingPager : public Pager {
     int num_frames;
     int hand;
 public:
-    AgingPager(int num_frams) {
-        this->num_frames = num_frams;
+    AgingPager(int num_frames) {
+        this->num_frames = num_frames;
         this->hand = 0;
     }
 
     virtual frame_t* select_victim_frame(int instruct_cnt) {
         int lowest = 0xffffffff;
         frame_t *hand_frame;
-        int victim_index;
+        int victim_index = hand;
         for (int i = 0; i < num_frames; i++) {
             hand_frame = &frame_table[hand];
             hand_frame->AGE = hand_frame->AGE >> 1;
@@ -300,7 +307,7 @@ public:
             if (processes->at(pid)->page_table[vpn].REFERENCED) {
                 hand_frame->AGE = (hand_frame->AGE | 0x80000000);
             }
-            processes->at(pid)->page_table[vpn].REFERENCED = false;
+            processes->at(pid)->page_table[vpn].REFERENCED = 0;
             if (hand_frame->AGE < lowest) {
                 victim_index = hand;
                 lowest = hand_frame->AGE;
@@ -308,9 +315,18 @@ public:
             hand = (hand + 1) % num_frames;
 
         }
-        hand = (hand + 1) % num_frames;
+        hand = (victim_index + 1) % num_frames;
         return &frame_table[victim_index];
     }
+
+    virtual void map_update(int frame_id) {
+        if (frame_id >= num_frames) {
+            printf("ERROR");
+        } else {
+            frame_t *fp = &frame_table[frame_id];
+            fp->AGE = 0;
+        }
+    };
 };
 
 class WSPager : public Pager {
@@ -355,6 +371,8 @@ public:
         hand = (victim_index + 1) % num_frames;
         return &frame_table[victim_index];
     }
+
+    virtual void map_update(int frame_id) {return;};
 };
 
 class Simulator {
@@ -401,6 +419,7 @@ public:
                 break;
             case 'a':
                 this->pager = new AgingPager(num_frames);
+                break;
             case 'w':
                 this->pager = new WSPager(num_frames);
             default:
@@ -508,19 +527,23 @@ public:
         }
     }
 
-    frame_t *allocate_frame_from_free_list() {
-        if (free_list.size() == 0) return NULL;
-        else {
-            frame_t *res = &frame_table[free_list.front()];
-            free_list.pop_front();
-            return res;
-        }
-    }
+//    frame_t *allocate_frame_from_free_list() {
+//
+//    }
 
     frame_t *get_frame(int instruct_cnt) {
-        frame_t *frame = allocate_frame_from_free_list();
-        if (frame == NULL) frame = pager->select_victim_frame(instruct_cnt);
-        return frame;
+        frame_t *frame;
+        if (free_list.size() != 0) {
+            frame = &frame_table[free_list.front()];
+            frame->AGE = 0;
+            free_list.pop_front();
+            return frame;
+        } else {
+            frame = pager->select_victim_frame(instruct_cnt);
+            frame->AGE = 0;
+            return frame;
+        }
+//        return frame;
     }
 
     void simulation() {
@@ -530,7 +553,6 @@ public:
         int instruct_cnt = 0;
         int ctx_switches = 0, process_exits= 0;
         unsigned long long cost = 0;
-        int frame_index = -1;
         while (get_next_instruction(operation, vpage)) {
             // handle special case of “c” and “e” instruction
             printf("%d: ==> %c %d\n", instruct_cnt, operation, vpage);
@@ -632,6 +654,7 @@ public:
                     pte->FRAME_NUMBER = newframe->INDEX;
                     pte->PRESENT = 1;
                     printf(" MAP %d\n", newframe->INDEX);
+//                    pager->map_update(newframe->INDEX);
                     current_process->pstats.maps++;
                 }
 //            } else {
@@ -665,7 +688,7 @@ public:
         if (Fflag) {
             printf("FT:");
             for (int i = 0; i < num_frames; i++) {
-                if (frame_table[i].PROCESS_ID == -1) printf("*");
+                if (frame_table[i].PROCESS_ID == -1) printf(" *");
                 else {
                     printf(" %d:%d", frame_table[i].PROCESS_ID, frame_table[i].VPAGE);
                 }
