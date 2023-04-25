@@ -51,6 +51,7 @@ typedef struct {
     int PROCESS_ID = -1;
     int VPAGE = -1;
     int INDEX = -1;
+    unsigned int AGE = 0;
 } frame_t;
 
 //pte_t page_table[MAX_VPAGES];
@@ -200,6 +201,7 @@ class NRUPager: public Pager {
     int num_frames;
     int hand;
     int reset_period;
+    int last_rest;
 //    frame_t *class_0;
 //    frame_t *class_1;
 //    frame_t *class_2;
@@ -210,7 +212,7 @@ public:
         this->num_frames = num_frames;
         this->hand = 0;
         this->reset_period = 50;
-
+        this->last_rest = -1;
     }
 
     frame_t* select_victim_frame(int instruct_cnt) override {
@@ -220,7 +222,7 @@ public:
         frame_t *class_3 = nullptr;
 
         bool RESET_FLAG = false;
-        if ((instruct_cnt+1) % reset_period == 0) {
+        if (instruct_cnt - last_rest >= 50) {
             RESET_FLAG = true;
         }
         frame_t *curr_frame;
@@ -251,7 +253,10 @@ public:
             }
             hand = (hand + 1) % num_frames;
         }
-        if (RESET_FLAG) RESET_FLAG = false;
+        if (RESET_FLAG) {
+            RESET_FLAG = false;
+            last_rest = instruct_cnt;
+        }
         if (class_0 != nullptr) {
             hand = class_0->INDEX;
             hand = (hand + 1) % num_frames;
@@ -270,6 +275,43 @@ public:
             return class_3;
         }
     }
+};
+
+class AgingPager : public Pager {
+    int num_frames;
+    int hand;
+public:
+    AgingPager(int num_frams) {
+        this->num_frames = num_frams;
+        this->hand = 0;
+    }
+
+    virtual frame_t* select_victim_frame(int curInst) {
+        int lowest = 0xffffffff;
+        frame_t *hand_frame;
+        int victim_index;
+        for (int i = 0; i < num_frames; i++) {
+            hand_frame = &frame_table[hand];
+            hand_frame->AGE = hand_frame->AGE >> 1;
+//            iter->age = iter->age >> 1;
+            int pid = hand_frame->PROCESS_ID;
+            int vpn = hand_frame->VPAGE;
+            if (processes->at(pid)->page_table[vpn].REFERENCED) {
+                hand_frame->AGE = (hand_frame->AGE | 0x80000000);
+            }
+            processes->at(pid)->page_table[vpn].REFERENCED = false;
+            if (hand_frame->AGE < lowest) {
+                victim_index = hand;
+                lowest = hand_frame->AGE;
+            }
+            hand = (hand + 1) % num_frames;
+
+        }
+        hand = (hand + 1) % num_frames;
+        return &frame_table[victim_index];
+    }
+
+
 };
 
 class Simulator {
@@ -314,6 +356,8 @@ public:
             case 'e':
                 this->pager = new NRUPager(num_frames);
                 break;
+            case 'a':
+                this->pager = new AgingPager(num_frames);
             default:
                 break;
         }
