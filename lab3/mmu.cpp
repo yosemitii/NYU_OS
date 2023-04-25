@@ -52,6 +52,7 @@ typedef struct {
     int VPAGE = -1;
     int INDEX = -1;
     unsigned int AGE = 0;
+    unsigned int TIME_LAST_USED = 0;
 } frame_t;
 
 //pte_t page_table[MAX_VPAGES];
@@ -286,7 +287,7 @@ public:
         this->hand = 0;
     }
 
-    virtual frame_t* select_victim_frame(int curInst) {
+    virtual frame_t* select_victim_frame(int instruct_cnt) {
         int lowest = 0xffffffff;
         frame_t *hand_frame;
         int victim_index;
@@ -310,8 +311,50 @@ public:
         hand = (hand + 1) % num_frames;
         return &frame_table[victim_index];
     }
+};
 
+class WSPager : public Pager {
 
+    int hand;
+    int num_frames;
+
+public:
+    WSPager(int num_frames) {
+        this->hand = 0;
+        this->num_frames = num_frames;
+    }
+
+    frame_t* select_victim_frame(int instruct_cnt) {
+        int max_age = 0;
+        int victim_index = hand;
+        int start = hand;
+        do {
+            frame_t *curr_frame = &frame_table[hand];
+            int pid = curr_frame->PROCESS_ID;
+            int vpn = curr_frame->VPAGE;
+            pte_t *pte = &processes->at(pid)->page_table[vpn];
+            if (pte->REFERENCED) {
+                pte->REFERENCED = false;
+                curr_frame->TIME_LAST_USED = instruct_cnt;
+            }
+            else {
+                int age = instruct_cnt - curr_frame->TIME_LAST_USED;
+                if (age >= 50) {
+                    victim_index = hand;
+                    hand = (victim_index + 1) % num_frames;
+                    return &frame_table[victim_index];
+                }
+                if (age > max_age) {
+                    victim_index = hand;
+                    max_age = age;
+                }
+            }
+            hand = (hand + 1) % num_frames;
+//            cnt++;
+        } while (hand != start);
+        hand = (victim_index + 1) % num_frames;
+        return &frame_table[victim_index];
+    }
 };
 
 class Simulator {
@@ -358,6 +401,8 @@ public:
                 break;
             case 'a':
                 this->pager = new AgingPager(num_frames);
+            case 'w':
+                this->pager = new WSPager(num_frames);
             default:
                 break;
         }
@@ -405,7 +450,7 @@ public:
                 int end = 63;
                 int write_protected = 0;
                 int file_mapped = 0;
-                std::cout << line << std::endl;
+//                std::cout << line << std::endl;
                 istringstream line_stream(line);
                 for (int i = 0; i < 4; i++) {
 //                    token = strtok(lineArr, delim);
@@ -432,7 +477,7 @@ public:
                 }
             }
         }
-        printf("--------------Done reading processes--------------\n");
+//        printf("--------------Done reading processes--------------\n");
         for (int i = 0; i < num_frames; i++) {
             free_list.push_back(i);
             frame_table[i].VPAGE = -1;
@@ -671,7 +716,7 @@ int main (int argc, char** argv) {
         {
             case 'f':
                 num_frames = std::atoi(optarg);
-                printf("OPT arg: %s\n", optarg);
+//                printf("OPT arg: %s\n", optarg);
                 if (sscanf(argv[optind], "-f%d", &num_frames) == -1)
                 {
                     printf("Error input");
@@ -685,7 +730,7 @@ int main (int argc, char** argv) {
                 }
                 break;
             case 'o':
-                printf("o\n");
+//                printf("o\n");
                 break;
             case '?':
                 printf("%s", c);
@@ -701,13 +746,13 @@ int main (int argc, char** argv) {
     {
         if (fileCnt == 0)
         {
-            printf("%s\n", argv[index]);
+//            printf("%s\n", argv[index]);
             infile_name = string(argv[index]);
             fileCnt++;
         }
         else if (fileCnt == 1)
         {
-            printf("%s\n", argv[index]);
+//            printf("%s\n", argv[index]);
             rfile_name = string(argv[index]);
 //            randFile = convertToString(argv[index]);
             fileCnt++;
