@@ -615,11 +615,12 @@ public:
                         Process *victim = processes->at(pid);
                         victim->pstats.unmaps++;
                         if (victim->page_table[vpn].MODIFIED) {
-                            victim->page_table[vpn].PAGEDOUT = 1;
+
                             if (victim->page_table[vpn].FILE_MAPPED) {
                                 printf(" FOUT\n");
                                 victim->pstats.fouts++;
                             } else {
+                                victim->page_table[vpn].PAGEDOUT = 1;
                                 printf(" OUT\n");
                                 victim->pstats.outs++;
                             }
