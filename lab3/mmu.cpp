@@ -9,6 +9,7 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
+#include <cstring>
 #include "utils.h"
 using namespace std;
 
@@ -38,6 +39,18 @@ typedef struct {
     unsigned int FILE_MAPPED:1;
     unsigned int FREE:18;
     unsigned int FRAME_NUMBER:7;
+
+    void init() {
+        PRESENT = 0;
+        REFERENCED = 0;
+        MODIFIED = 0;
+        WRITE_PROTECT = 0;
+        PAGEDOUT = 0;
+        NOT_HOLE = 0;
+        FILE_MAPPED = 0;
+        FREE = 0;
+        FRAME_NUMBER = 0;
+    }
 
     void reset() {
         PRESENT = 0;
@@ -81,16 +94,6 @@ public:
         this->page_table[MAX_VPAGES] = {0};
         this->pstats;
     }
-
-
-
-//    void display_pte() {
-//        for (int i = 0; i < 64; i++) {
-//            printf("PTE:%d, PRESENT:%d REFERENCED:%d MODIFIED:%d WRITE_PROTECT:%d PAGEDOUT:%d, NOT_HOLE:%d, FRAME_NUMBER:%d\n", i,
-//                   page_table[i].PRESENT, page_table[i].REFERENCED, page_table[i].MODIFIED, page_table[i].WRITE_PROTECT,
-//                   page_table[i].PAGEDOUT, page_table[i].NOT_HOLE, page_table[i].FRAME_NUMBER);
-//        }
-//    }
 
     void display_pagetable() {
         printf("PT[%d]:", id);
@@ -483,6 +486,7 @@ public:
                     else line_stream >> file_mapped;
                 }
                 for (int j = start; j <= end; j++) {
+                    curr_proc->page_table[j].init();
                     curr_proc->page_table[j].NOT_HOLE = 1;
                     curr_proc->page_table[j].WRITE_PROTECT = write_protected;
                     curr_proc->page_table[j].FILE_MAPPED = file_mapped;
@@ -503,10 +507,6 @@ public:
             frame_table[i].PROCESS_ID = -1;
             frame_table[i].INDEX = i;
         }
-//        for (auto p: *processes){
-//            printf("process id: %d\n", p->id);
-//            p->display_pte();
-//        }
     }
 
     bool  get_next_instruction(char &operation, int &vpage) {
@@ -591,7 +591,7 @@ public:
                 process_exits++;
                 continue;
             }
-            // now the real instructions for read and write
+                // now the real instructions for read and write
             else {
                 pte_t *pte = &current_process->page_table[vpage];
                 cost += COST_RW;
