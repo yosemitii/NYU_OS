@@ -55,68 +55,6 @@ typedef struct {
 
 //pte_t page_table[MAX_VPAGES];
 frame_t frame_table[MAX_FRAMES];
-int victim_frame_index = -1;
-class Pager {
-public:
-    virtual frame_t* select_victim_frame() = 0; // virtual base class
-};
-
-class FIFOPager: public Pager {
-    int num_frames;
-//    int size;
-    int victim_index;
-public:
-    FIFOPager(int num_frames) {
-//        this->size = 0;
-//        this->frames = deque<frame_t*> (num_frames);l
-        this->num_frames = num_frames;
-        this->victim_index = -1;
-    }
-    frame_t* select_victim_frame() override {
-        victim_index = (victim_index + 1) % num_frames;
-        return &frame_table[victim_index];
-//        return frames[victim_index];
-    }
-};
-
-class RandomPager: public Pager {
-    int num_frames;
-//    int size;
-    int victim_index;
-    RandGenerator *randGenerator;
-public:
-    RandomPager(int num_frames, std::string rfile_name) {
-//        this->size = 0;
-//        this->frames = deque<frame_t*> (num_frames);l
-        this->num_frames = num_frames;
-        this->victim_index = -1;
-        this->randGenerator = new RandGenerator(rfile_name);
-    }
-
-    frame_t* select_victim_frame() override {
-        victim_index = randGenerator->myrandom(num_frames);
-        return &frame_table[victim_index];
-    }
-
-};
-
-class ClockPager: public Pager {
-    int num_frames;
-//    int size;
-    int victim_index;
-    RandGenerator *randGenerator;
-public:
-    ClockPager(int num_frames) {
-        this->num_frames = num_frames;
-        this->victim_index = -1;
-    }
-
-    frame_t* select_victim_frame() override {
-        victim_index = randGenerator->myrandom(num_frames);
-        return &frame_table[victim_index];
-    }
-
-};
 
 class Process {
 public:
@@ -183,13 +121,164 @@ public:
 
 };
 
+vector<Process *> *processes = new vector<Process *>();
+
+class Pager {
+public:
+    virtual frame_t* select_victim_frame(int instruct_cnt) = 0; // virtual base class
+//
+//    virtual void update_pager(int frame_id);
+};
+
+class FIFOPager: public Pager {
+    int num_frames;
+//    int size;
+    int hand;
+public:
+    FIFOPager(int num_frames) {
+//        this->size = 0;
+//        this->frames = deque<frame_t*> (num_frames);l
+        this->num_frames = num_frames;
+        this->hand = -1;
+    }
+    frame_t* select_victim_frame(int instruct_cnt) override {
+        hand = (hand + 1) % num_frames;
+        return &frame_table[hand];
+//        return frames[hand];
+    }
+};
+
+class RandomPager: public Pager {
+    int num_frames;
+    int hand;
+    RandGenerator *randGenerator;
+public:
+    RandomPager(int num_frames, std::string rfile_name) {
+//        this->size = 0;
+//        this->frames = deque<frame_t*> (num_frames);l
+        this->num_frames = num_frames;
+        this->hand = -1;
+        this->randGenerator = new RandGenerator(rfile_name);
+    }
+
+    frame_t* select_victim_frame(int instruct_cnt) override {
+        hand = randGenerator->myrandom(num_frames);
+        return &frame_table[hand];
+    }
+
+};
+
+class ClockPager: public Pager {
+    int num_frames;
+//    int size;
+    int hand;
+    RandGenerator *randGenerator;
+public:
+    ClockPager(int num_frames) {
+        this->num_frames = num_frames;
+        this->hand = -1;
+    }
+
+    frame_t* select_victim_frame(int instruct_cnt) override {
+        hand = (hand + 1) % num_frames;
+        int cnt = 0;
+        int pid = frame_table[hand].PROCESS_ID;
+        int vpn = frame_table[hand].VPAGE;
+        while (processes->at(pid)->page_table[vpn].REFERENCED) {
+            processes->at(pid)->page_table[vpn].REFERENCED = false;
+            hand = (hand + 1) % num_frames;
+            pid = frame_table[hand].PROCESS_ID;
+            vpn = frame_table[hand].VPAGE;
+            cnt++;
+        }
+        return &frame_table[hand];
+    }
+
+};
+
+class NRUPager: public Pager {
+    int num_frames;
+    int hand;
+    int reset_period;
+//    frame_t *class_0;
+//    frame_t *class_1;
+//    frame_t *class_2;
+//    frame_t *class_3;
+
+public:
+    NRUPager(int num_frames) {
+        this->num_frames = num_frames;
+        this->hand = 0;
+        this->reset_period = 50;
+
+    }
+
+    frame_t* select_victim_frame(int instruct_cnt) override {
+        frame_t *class_0 = nullptr;
+        frame_t *class_1 = nullptr;
+        frame_t *class_2 = nullptr;
+        frame_t *class_3 = nullptr;
+
+        bool RESET_FLAG = false;
+        if ((instruct_cnt+1) % reset_period == 0) {
+            RESET_FLAG = true;
+        }
+        frame_t *curr_frame;
+        int pid;
+        int vpn;
+        for (int i = 0; i < num_frames; i++) {
+            curr_frame = &frame_table[hand];
+            pid = curr_frame->PROCESS_ID;
+            vpn = curr_frame->VPAGE;
+            pte_t *curr_pte = &processes->at(pid)->page_table[vpn];
+
+            if (!curr_pte->REFERENCED && !curr_pte->MODIFIED && class_0 == nullptr) {
+                class_0 = curr_frame;
+                if (!RESET_FLAG) {
+                    hand = (hand + 1) % num_frames;
+                    return curr_frame;
+                }
+            } else if (!curr_pte->REFERENCED && curr_pte->MODIFIED && class_1 == nullptr) {
+                class_1 = curr_frame;
+            } else if (curr_pte->REFERENCED && !curr_pte->MODIFIED && class_2 == nullptr) {
+                class_2 = curr_frame;
+            } else if (curr_pte->REFERENCED && curr_pte->MODIFIED && class_3 == nullptr) {
+                class_3 = curr_frame;
+            }
+
+            if (RESET_FLAG) {
+                curr_pte->REFERENCED = 0;
+            }
+            hand = (hand + 1) % num_frames;
+        }
+        if (RESET_FLAG) RESET_FLAG = false;
+        if (class_0 != nullptr) {
+            hand = class_0->INDEX;
+            hand = (hand + 1) % num_frames;
+            return class_0;
+        } else if (class_1 != nullptr) {
+            hand = class_1->INDEX;
+            hand = (hand + 1) % num_frames;
+            return class_1;
+        } else if (class_2 != nullptr) {
+            hand = class_2->INDEX;
+            hand = (hand + 1) % num_frames;
+            return class_2;
+        } else {
+            hand = class_3->INDEX;
+            hand = (hand + 1) % num_frames;
+            return class_3;
+        }
+    }
+};
+
 class Simulator {
 public:
     int num_frames;
     std::string infile_name;
     std::string rfile_name;
     std::deque<int> free_list;
-    vector<Process *> *processes;
+
     ifstream inFile;
     ifstream rFile;
     Pager *pager;
@@ -207,7 +296,7 @@ public:
 
         this->pager = new FIFOPager(num_frames);
         this->num_frames = num_frames;
-        this->processes = new vector<Process *>;
+//        this->processes = new vector<Process *>;
 //        this->frame_table = new frame_t[num_frames];
     }
 
@@ -218,6 +307,12 @@ public:
         {
             case 'r':
                 this->pager = new RandomPager(num_frames, rfile_name);
+                break;
+            case 'c':
+                this->pager = new ClockPager(num_frames);
+                break;
+            case 'e':
+                this->pager = new NRUPager(num_frames);
                 break;
             default:
                 break;
@@ -253,7 +348,8 @@ public:
                 //Type 1: Number of VMAs
                 num_vmas = stoi(line);
                 curr_proc = new Process(proc_cnt);
-                this->processes->push_back(curr_proc);
+                processes->push_back(curr_proc);
+//                this->processes->push_back(curr_proc);
                 readType++;
             }
             else if (readType == 2)
@@ -332,9 +428,9 @@ public:
         }
     }
 
-    frame_t *get_frame() {
+    frame_t *get_frame(int instruct_cnt) {
         frame_t *frame = allocate_frame_from_free_list();
-        if (frame == NULL) frame = pager->select_victim_frame();
+        if (frame == NULL) frame = pager->select_victim_frame(instruct_cnt);
         return frame;
     }
 
@@ -397,7 +493,7 @@ public:
                 if (!pte->PRESENT) {
                     // this in reality generates the page fault exception and now you execute
                     // verify this is actually a valid page in a vma if not raise error and next inst
-                    frame_t *newframe = get_frame();
+                    frame_t *newframe = get_frame(instruct_cnt);
 //                frame_t *newframe = get_frame();
                     //-> figure out if/what to do with old frame if it was mapped
                     int pid = newframe->PROCESS_ID;
@@ -463,6 +559,7 @@ public:
                     }
                 }
                 pte->REFERENCED = 1;
+
 
                 // simulate instruction execution by hardware by updating the R/M PTE bits
 //            update_pte(read/modify) bits based on operations.
